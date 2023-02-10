@@ -1,0 +1,820 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <author>James Hall</author>
+ <class>apodwall_main_window</class>
+ <widget class="QMainWindow" name="apodwall_main_window">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>629</width>
+    <height>742</height>
+   </rect>
+  </property>
+  <property name="contextMenuPolicy">
+   <enum>Qt::ActionsContextMenu</enum>
+  </property>
+  <property name="windowTitle">
+   <string>MainWindow</string>
+  </property>
+  <widget class="QWidget" name="apodwall_main_widget">
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <item>
+     <widget class="QTabWidget" name="apodwall_tab_menu">
+      <property name="contextMenuPolicy">
+       <enum>Qt::NoContextMenu</enum>
+      </property>
+      <property name="layoutDirection">
+       <enum>Qt::LeftToRight</enum>
+      </property>
+      <property name="tabPosition">
+       <enum>QTabWidget::South</enum>
+      </property>
+      <property name="currentIndex">
+       <number>1</number>
+      </property>
+      <property name="movable">
+       <bool>false</bool>
+      </property>
+      <widget class="QWidget" name="main_tab">
+       <attribute name="title">
+        <string>MAIN</string>
+       </attribute>
+       <layout class="QGridLayout" name="gridLayout_3">
+        <item row="0" column="0">
+         <widget class="QScrollArea" name="scrollArea">
+          <property name="widgetResizable">
+           <bool>true</bool>
+          </property>
+          <widget class="QWidget" name="scrollAreaWidgetContents">
+           <property name="geometry">
+            <rect>
+             <x>0</x>
+             <y>0</y>
+             <width>587</width>
+             <height>481</height>
+            </rect>
+           </property>
+          </widget>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="settings_tab">
+       <attribute name="title">
+        <string>SETTINGS</string>
+       </attribute>
+       <layout class="QGridLayout" name="gridLayout_2">
+        <item row="0" column="1">
+         <widget class="QGroupBox" name="image_group">
+          <property name="title">
+           <string>Image Options</string>
+          </property>
+          <layout class="QGridLayout" name="gridLayout">
+           <item row="1" column="1">
+            <widget class="QComboBox" name="image_quality_combobox">
+             <property name="font">
+              <font>
+               <family>Noto Sans Mono</family>
+               <weight>50</weight>
+               <bold>false</bold>
+              </font>
+             </property>
+             <item>
+              <property name="text">
+               <string>HD</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>STANDARD</string>
+              </property>
+             </item>
+            </widget>
+           </item>
+           <item row="0" column="0">
+            <widget class="QLabel" name="keep_saved_label">
+             <property name="text">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;KEEP SAVED:&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="1">
+            <widget class="QLabel" name="crop_ratio_label">
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick a standard apsect ratio, or define a custom one in the format: 16:9&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+             <property name="text">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;CROP RATIO:&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+            </widget>
+           </item>
+           <item row="5" column="1">
+            <widget class="QLineEdit" name="custom_crop_ratio_lineedit"/>
+           </item>
+           <item row="4" column="0">
+            <widget class="QLabel" name="custom_min_size_label">
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Minimum size of an image to set as wallpaper. A new image will be retrieved if the image is under the size set. Use the following format to define a custom amount, ex: 1366x736&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+             <property name="text">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;CUSTOM MIN SIZE:&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="1">
+            <widget class="QComboBox" name="crop_ratio_combobox">
+             <item>
+              <property name="text">
+               <string>16:9</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>4:3</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>21:9</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>32:9</string>
+              </property>
+             </item>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QSpinBox" name="keep_saved_spinbox"/>
+           </item>
+           <item row="5" column="0">
+            <widget class="QLineEdit" name="custom_min_size_lineedit"/>
+           </item>
+           <item row="0" column="1">
+            <widget class="QLabel" name="quality_label">
+             <property name="font">
+              <font>
+               <family>Noto Sans Mono</family>
+               <weight>50</weight>
+               <bold>false</bold>
+              </font>
+             </property>
+             <property name="text">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;QUALITY:&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="0">
+            <widget class="QComboBox" name="min_size_combobox">
+             <item>
+              <property name="text">
+               <string>500x500</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>600x400</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>800x400</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>800x600</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>800x800</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>1000x600</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>1000x800</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>1000x1000</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>1200x600</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>1200x800</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>1200x1000</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>1366x768</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>1400x1050</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>1600x900</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>1920x1080</string>
+              </property>
+             </item>
+            </widget>
+           </item>
+           <item row="2" column="0">
+            <widget class="QLabel" name="min_size_label">
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Minimum size of an image to set as wallpaper. A new image will be retrieved if the image is under the size set. Use the following format to define a custom amount, ex: 1366x736&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+             <property name="text">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;MIN SIZE:&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="1">
+            <widget class="QLabel" name="custom_crop_ratio_label">
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick a standard apsect ratio, or define a custom one in the format: 16:9&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+             <property name="text">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;CUSTOM CROP RATIO:&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QGroupBox" name="custom_settings_group">
+          <property name="title">
+           <string>CUSTOM SETTINGS</string>
+          </property>
+          <layout class="QVBoxLayout" name="verticalLayout_3">
+           <item>
+            <widget class="QLabel" name="command_label">
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;A custom command to set the background, use {}  where the path to wallpaper should go. Ex: qtile cmd-obj -o group screen1 -f set_wallpaper -a {} fill&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+             <property name="text">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;COMMAND&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="KLineEdit" name="command_lineedit"/>
+           </item>
+           <item>
+            <widget class="QLabel" name="env_var_label">
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set a custom environment variable, default is $XDG_CURRENT_DESKTOP.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+             <property name="text">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;ENVIRONMENT VARIABLE&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="KLineEdit" name="env_var_lineedit"/>
+           </item>
+           <item>
+            <widget class="QLabel" name="env_var_value_label">
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;A custom string to look for when returning the value of your environment variable. &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+             <property name="text">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;ENVIRONMENT VARIABLE VALUE&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="KLineEdit" name="env_var_value_lineedit"/>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item row="0" column="0">
+         <widget class="QGroupBox" name="general_group">
+          <property name="title">
+           <string>GENERAL SETTINGS</string>
+          </property>
+          <layout class="QVBoxLayout" name="verticalLayout_2">
+           <item>
+            <widget class="QLabel" name="apod_directory_label">
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Directory to save Astronomy Pictures of the Day.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+             <property name="text">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;SAVE DIRECTORY&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="KLineEdit" name="apod_directory_lineedit"/>
+           </item>
+           <item>
+            <widget class="QLabel" name="data_file_label">
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The location to save the apodwall.data file. It keeps track of APOD's downloaded and uses the file to complete operations such as removing cropped and temporary files and keep saved.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+             <property name="text">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;DATA FILE PATH:&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="KLineEdit" name="data_file_lineedit"/>
+           </item>
+           <item>
+            <widget class="QLabel" name="data_file_size_label">
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Amount of saved apods to keep track of.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+             <property name="text">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;DATA FILE SIZE:&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QSpinBox" name="data_file_size_spinbox"/>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QGroupBox" name="nasa_group">
+          <property name="toolTip">
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;NASA API Key, register for one on &lt;a href=&quot;https://api.nasa.gov&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;https://api.nasa.gov&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          </property>
+          <property name="title">
+           <string>NASA API KEYS</string>
+          </property>
+          <layout class="QVBoxLayout" name="verticalLayout_4">
+           <item>
+            <widget class="KLineEdit" name="api_key_lineedit"/>
+           </item>
+           <item>
+            <widget class="KLineEdit" name="api_key_lineedit_2"/>
+           </item>
+           <item>
+            <widget class="KLineEdit" name="api_key_lineedit_3"/>
+           </item>
+           <item>
+            <widget class="KLineEdit" name="api_key_lineedit_4"/>
+           </item>
+          </layout>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </widget>
+    </item>
+    <item>
+     <widget class="QGroupBox" name="apodwall_group">
+      <property name="title">
+       <string>APODWall</string>
+      </property>
+      <layout class="QGridLayout" name="gridLayout_4">
+       <item row="2" column="1">
+        <spacer name="main_button_spacer">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item row="1" column="2">
+        <widget class="QCheckBox" name="auto_run_checkbox">
+         <property name="toolTip">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Check box to auto-run apodwall on startup.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
+         <property name="layoutDirection">
+          <enum>Qt::LeftToRight</enum>
+         </property>
+         <property name="text">
+          <string>RUN ON START</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="3">
+        <widget class="QPushButton" name="daily_apod_button">
+         <property name="toolTip">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Run APODWall&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
+         <property name="text">
+          <string>GET DAILY APOD</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QPushButton" name="random_apod_button_2">
+         <property name="toolTip">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Run APODWall&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
+         <property name="text">
+          <string>BROWSE APOD HISTORY</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QPushButton" name="launch_apodhome_button">
+         <property name="toolTip">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Run APODWall&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
+         <property name="text">
+          <string>LAUNCH APOD.NASA.GOV</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="3">
+        <widget class="QPushButton" name="random_apod_button">
+         <property name="toolTip">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Run APODWall&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
+         <property name="text">
+          <string>GET RANDOM APOD</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="2">
+        <widget class="QCheckBox" name="set_wallpaper_checkBox">
+         <property name="layoutDirection">
+          <enum>Qt::LeftToRight</enum>
+         </property>
+         <property name="text">
+          <string>SET AS WALLPAPER</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="apodwall_menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>629</width>
+     <height>29</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuMENU">
+    <property name="title">
+     <string>MENU</string>
+    </property>
+    <addaction name="actionAPODWALL_HOME"/>
+    <addaction name="actionQUIT_2"/>
+   </widget>
+   <addaction name="menuMENU"/>
+  </widget>
+  <widget class="QStatusBar" name="apodwall_statusbar"/>
+  <action name="actionQUIT">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>QUIT</string>
+   </property>
+   <property name="toolTip">
+    <string>Quit application.</string>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>10</pointsize>
+    </font>
+   </property>
+  </action>
+  <action name="actionAPODWall_HOMEPAGE">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>APODWall HOMEPAGE</string>
+   </property>
+  </action>
+  <action name="actionAPODWALL_HOME">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>APODWALL HOME</string>
+   </property>
+  </action>
+  <action name="actionQUIT_2">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>QUIT</string>
+   </property>
+  </action>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>KLineEdit</class>
+   <extends>QLineEdit</extends>
+   <header>klineedit.h</header>
+  </customwidget>
+ </customwidgets>
+ <tabstops>
+  <tabstop>apodwall_tab_menu</tabstop>
+  <tabstop>apod_directory_lineedit</tabstop>
+  <tabstop>data_file_lineedit</tabstop>
+  <tabstop>api_key_lineedit</tabstop>
+  <tabstop>command_lineedit</tabstop>
+  <tabstop>env_var_lineedit</tabstop>
+  <tabstop>env_var_value_lineedit</tabstop>
+ </tabstops>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>actionQUIT</sender>
+   <signal>triggered()</signal>
+   <receiver>apodwall_main_window</receiver>
+   <slot>close()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>213</x>
+     <y>205</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionAPODWall_HOMEPAGE</sender>
+   <signal>triggered()</signal>
+   <receiver>apodwall_main_window</receiver>
+   <slot>update()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>213</x>
+     <y>205</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>min_size_combobox</sender>
+   <signal>currentIndexChanged(QString)</signal>
+   <receiver>daily_apod_button</receiver>
+   <slot>update()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>349</x>
+     <y>171</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>587</x>
+     <y>441</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>command_lineedit</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>daily_apod_button</receiver>
+   <slot>update()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>202</x>
+     <y>301</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>587</x>
+     <y>441</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>data_file_size_spinbox</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>daily_apod_button</receiver>
+   <slot>update()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>209</x>
+     <y>223</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>587</x>
+     <y>441</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>custom_min_size_lineedit</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>daily_apod_button</receiver>
+   <slot>update()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>399</x>
+     <y>351</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>587</x>
+     <y>441</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>api_key_lineedit</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>daily_apod_button</receiver>
+   <slot>update()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>195</x>
+     <y>432</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>587</x>
+     <y>441</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>env_var_value_lineedit</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>daily_apod_button</receiver>
+   <slot>update()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>282</x>
+     <y>402</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>587</x>
+     <y>441</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>apod_directory_lineedit</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>daily_apod_button</receiver>
+   <slot>update()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>144</x>
+     <y>121</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>587</x>
+     <y>441</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>crop_ratio_combobox</sender>
+   <signal>currentIndexChanged(QString)</signal>
+   <receiver>daily_apod_button</receiver>
+   <slot>update()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>349</x>
+     <y>222</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>587</x>
+     <y>441</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>custom_crop_ratio_lineedit</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>daily_apod_button</receiver>
+   <slot>update()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>399</x>
+     <y>301</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>587</x>
+     <y>441</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>image_quality_combobox</sender>
+   <signal>currentIndexChanged(QString)</signal>
+   <receiver>daily_apod_button</receiver>
+   <slot>update()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>349</x>
+     <y>121</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>587</x>
+     <y>441</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>env_var_lineedit</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>daily_apod_button</receiver>
+   <slot>update()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>204</x>
+     <y>352</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>587</x>
+     <y>441</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>data_file_lineedit</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>daily_apod_button</receiver>
+   <slot>update()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>144</x>
+     <y>171</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>587</x>
+     <y>441</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>keep_saved_spinbox</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>daily_apod_button</receiver>
+   <slot>update()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>79</x>
+     <y>222</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>587</x>
+     <y>441</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>daily_apod_button</sender>
+   <signal>clicked()</signal>
+   <receiver>daily_apod_button</receiver>
+   <slot>update()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>587</x>
+     <y>441</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>490</x>
+     <y>637</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>

@@ -1,0 +1,57 @@
+# CONFIGURATION FILE FOR APODWALL.PY. A CONFIGURATION FILE IS
+# CREATED BY DEFAULT ON FIRST RUN. LEAVE OPTIONS BLANK TO USE
+# THE DEFAULT VALUE.
+
+
+[GENERAL]
+SAVE_DIR=
+# ex: /.config/APODWall/image/
+# wallpaper save directory. defaults to install location
+THUMBNAIL_DIR=
+# ex: /.config/APODWall/image/thumbnail/
+# directory to save APOD thumbnauls
+APP_DATA=
+# ex: /.config/APODWall/.data
+# location of the data file, defaults to install location
+DATA_SIZE=
+# ex: 1000
+# amount of apods to store in data file
+HISTORY_SIZE=
+# ex: 1000
+# amount of thumbnails and data to save
+KEEP_SAVED=
+# ex: 20
+# amount of images to keep saved in save directory
+CROP_SAVED=
+# ex: 3
+# amount of cropped images to keep saved
+TMP_SAVED=
+# ex: 0
+
+
+[IMAGE]
+IMAGE_QUALITY=
+# ex: hd
+ # Set to True for higher quality images hd or standard
+IMAGE_MIN_SIZE=
+# ex: 1366x768
+# min size of image to set as as a wallpaper.
+IMAGE_CROP_RATIO=
+# aspect ratio to crop the images set any value you want here, common screen aspect ratios: 4:3, 16:9, 21:9, 32:9
+
+
+[NASA]
+API_KEY=
+# API key, register for on on api.nasa.gov
+
+
+[CUSTOM]
+CUSTOM_CMD=
+# ex: qtile cmd-obj -o  group screen -f set_wallpaper -a {} stretch
+# set wallpaper with custom command, use {} where /image/path will go.
+CUSTOM_ENV_VAR=
+#ex: XDG_CURRENT_DESKTOP
+# set the env var to identify desktop. the default is XDG_CURRENT_DESKTOP. windows and mac uses a different method.
+CUSTOM_STRING=
+# ex: qtile
+# string returned from env var.
