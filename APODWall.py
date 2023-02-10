@@ -14,6 +14,7 @@ import re
 import requests
 import ctypes
 import csv
+import json
 from PIL import Image
 from pathlib import Path
 from configparser import ConfigParser
@@ -63,7 +64,7 @@ def formulate_data(APP_DATA, IMAGE_QUALITY, API_KEY, FIELD_NAMES, resp):
     regex_string = r'image/[0-9]{4}/(.*\.(jpg|jpeg|png))'
 
     try:
-        resp_dict = eval(resp.text)
+        resp_dict = json.loads(resp.text)
         try:
             apod_copyright = resp_dict['copyright']
         except:
@@ -359,7 +360,7 @@ def crop_image(DATE, SAVE_DIR, APP_DATA, IMAGE_QUALITY, IMAGE_MIN_SIZE,
     return file_name
 
 
-def check_data_header(APP_DATA, FIELD_NAMES, data_file):
+def check_data_header(APP_DATA, FIELD_NAMES):
     '''
     Check if header exists on data file, if not call function to write the
     header
