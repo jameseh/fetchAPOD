@@ -52,6 +52,3 @@ CUSTOM_CMD=
 CUSTOM_ENV_VAR=
 #ex: XDG_CURRENT_DESKTOP
 # set the env var to identify desktop. the default is XDG_CURRENT_DESKTOP. windows and mac uses a different method.
-CUSTOM_STRING=
-# ex: qtile
-# string returned from env var.
