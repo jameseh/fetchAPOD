@@ -28,17 +28,16 @@ def test_connection(RESP_URL):
     '''
     for attempt in range(4):
         try:
-            resp = requests.get(RESP_URL, timeout=(12.2, 30))
+            resp = requests.get(RESP_URL, timeout=(12.2, 30), stream=True)
             attempt += 1
             return resp
-        except requests.exceptions.Timeout:
-            pass
-        except requests.exceptions.TooManyRedirects:
-            pass
-        except requests.exceptions.ConnectionError:
+        except (requests.exceptions.Timeout,
+                requests.exceptions.TooManyRedirects,
+                requests.exceptions.ConnectionError):
             pass
         except requests.exceptions.RequestException:
             raise SystemExit(1)
+    raise SystemExit(1)
 
 
 def generate_data(API_KEY):
@@ -97,28 +96,20 @@ def formulate_data(APP_DATA, IMAGE_QUALITY, API_KEY, FIELD_NAMES, resp):
             apod_copyright, apod_html)
 
 
-def download_apod(DATE, SAVE_DIR, THUMBNAIL_DIR, APP_DATA, IMAGE_QUALITY,
-                  IMAGE_MIN_SIZE, API_KEY, FIELD_NAMES, apod_date, apod_title,
-                  apod_explanation, apod_url, apod_filename, apod_copyright,
-                  apod_html, apod_category):
+def download_apod(SAVE_DIR, apod_url, apod_filename):
     '''
     Download an APOD. Call functions to check the header and then a function
     to append the apod data to the data file.
     '''
     # Open the response and download the image. Open the data file and
     # append the filename to the file.
-    resp = requests.get(apod_url, stream=True)
+    resp = test_connection(apod_url)
     resp.raw.decode_content = True
     try:
         with open("{}{}".format(SAVE_DIR, apod_filename), "wb") as d:
             d.write(resp.content)
     except (PermissionError, OSError):
         raise SystemExit(1)
-    verify_dimensions(DATE, SAVE_DIR, THUMBNAIL_DIR, APP_DATA,
-                      IMAGE_QUALITY, IMAGE_MIN_SIZE, API_KEY, FIELD_NAMES,
-                      apod_date, apod_title, apod_explanation, apod_html,
-                      apod_filename, apod_copyright, apod_category)
-    return apod_filename
 
 
 def set_background(SAVE_DIR, IMAGE_QUALITY, CUSTOM_CMD, CUSTOM_ENV_VAR,
@@ -179,7 +170,6 @@ def set_background(SAVE_DIR, IMAGE_QUALITY, CUSTOM_CMD, CUSTOM_ENV_VAR,
         subprocess.Popen(wallpaper, shell=True).wait()
     except (FileNotFoundError, PermissionError, OSError):
         raise SystemExit(1)
-    return
 
 
 def gen_day(rand_month, rand_year):
@@ -187,9 +177,9 @@ def gen_day(rand_month, rand_year):
     Generate a valid random day of the month. Factor for leap year,
     and days in accompanying month.
     '''
-    # Check if the month is Febuary, if so determine if it is a leap
-    # year. If year divisible by 4, and not divisible by 100, unless
-    # also divisible by 400.
+    # Check if the month is Febuary, if so determine if it is a leap year.
+    # If year divisible by 4, and not divisible by 100, unless also divisible
+    # by 400.
     if int(rand_month) == 2:
         if int(rand_year) % 4 == 0 and int(rand_year) % 100 != 0:
             if int(rand_year) % 400 == 0:
@@ -198,8 +188,7 @@ def gen_day(rand_month, rand_year):
         else:
             rand_day = random.randint(1, 28)
             return rand_day
-    # Determine if the month has 30 days, else the only option left
-    # is 31.
+    # Determine if the month has 30 days, else the only option left is 31.
     if rand_month in [4, 6, 9, 11] and rand_month != 1:
         rand_day = random.randint(1, 30)
         return rand_day
@@ -254,18 +243,14 @@ def make_url(API_KEY, rand_year, rand_month, rand_day):
     if len(str(rand_day)) == 1:
         rand_day = str("0{}".format(rand_day))
     # Assemble the apod url using the random date. YYMMDD
-    rand_date = str(rand_year) + "-" + str(rand_month) + "-" + str(rand_day)
+    rand_apod_date = "{}-{}-{}".format(str(rand_year), str(rand_month),
+                                       str(rand_day))
     rand_url = ("https://api.nasa.gov/planetary/apod"
-                + "?api_key={}&date={}".format(API_KEY, rand_date))
-    rand_apod_date = (str(rand_year) + "-" + str(rand_month)
-                      + "-" + str(rand_day))
+                + "?api_key={}&date={}".format(API_KEY, rand_apod_date))
     return (rand_url, rand_apod_date)
 
 
-def verify_dimensions(DATE, SAVE_DIR, THUMBNAIL_DIR, APP_DATA, IMAGE_QUALITY,
-                      IMAGE_MIN_SIZE, API_KEY, FIELD_NAMES, apod_date,
-                      apod_title, apod_explanation, apod_html, apod_filename,
-                      apod_copyright, apod_category):
+def verify_dimensions(DATE, SAVE_DIR, IMAGE_MIN_SIZE, apod_filename):
     '''
     Verify the APOD images dimensions. If the images are less than
     the value of IMAGE_MIN_SIZE return False.
@@ -278,47 +263,30 @@ def verify_dimensions(DATE, SAVE_DIR, THUMBNAIL_DIR, APP_DATA, IMAGE_QUALITY,
         height = wallpaper.height
     except (FileNotFoundError, PermissionError, OSError):
         raise SystemExit(1)
-    while True:
-        if int(width) < int(min_width) or int(height) < int(min_height):
-            DATE = datetime.now().strftime("%Y%m%d%H%M%S")
-            append_data(DATE, APP_DATA, FIELD_NAMES, "", "", "", "",
-                        apod_filename, "", "tmp")
-            (apod_date, apod_title, apod_explanation, apod_url, apod_filename,
-             apod_copyright, apod_html) = (formulate_data(APP_DATA,
-                                           IMAGE_QUALITY, API_KEY, FIELD_NAMES,
-                                           generate_data(API_KEY)))
-            download_apod(DATE, SAVE_DIR, THUMBNAIL_DIR, APP_DATA,
-                          IMAGE_QUALITY, IMAGE_MIN_SIZE, API_KEY, FIELD_NAMES,
-                          apod_date, apod_title, apod_explanation, apod_url,
-                          apod_filename, apod_copyright, apod_html,
-                          apod_category)
-            create_thumbnail(DATE, SAVE_DIR, THUMBNAIL_DIR, APP_DATA,
-                             FIELD_NAMES, apod_date, apod_title,
-                             apod_explanation, apod_html, apod_filename,
-                             apod_copyright)
+    if int(width) < int(min_width) or int(height) < int(min_height):
         return True
 
 
 def create_thumbnail(DATE, SAVE_DIR, THUMBNAIL_DIR, APP_DATA, FIELD_NAMES,
                      apod_date, apod_title, apod_explanation, apod_html,
-                     apod_filename, apod_copyright):
+                     apod_url, apod_filename, apod_copyright):
     '''Create a thumbnail of an APOD.'''
     try:
+        apod_size = Path(SAVE_DIR + apod_filename).stat().st_size
         wallpaper = Image.open(SAVE_DIR + apod_filename)
+        apod_WxH = "{}x{}".format(str(wallpaper.width), str(wallpaper.height))
         wallpaper.thumbnail((310, 310))
-        apod_filename = apod_filename.split(".")[0] + "-thumbnail.PNG"
-        wallpaper.save(THUMBNAIL_DIR + apod_filename)
+        apod_filename_timg = apod_filename.split(".")[0] + "-thumbnail.PNG"
+        wallpaper.save(THUMBNAIL_DIR + apod_filename_timg)
     except (FileNotFoundError, PermissionError, OSError):
         raise SystemExit(1)
     append_data(DATE, APP_DATA, FIELD_NAMES, apod_date, apod_title,
-                apod_explanation, apod_html, apod_filename, apod_copyright,
-                "timg")
+                apod_explanation, apod_html, apod_url, apod_filename, apod_WxH,
+                apod_size, apod_copyright, "timg")
 
 
 def crop_image(DATE, SAVE_DIR, APP_DATA, IMAGE_QUALITY, IMAGE_MIN_SIZE,
-               IMAGE_CROP_RATIO, API_KEY, FIELD_NAMES, resp, apod_url,
-               apod_date, apod_title, apod_explanation, apod_html,
-               apod_filename, apod_copyright):
+               IMAGE_CROP_RATIO, FIELD_NAMES, apod_filename):
     '''
     Crop the image to a specific aspect ratio.
     '''
@@ -354,8 +322,8 @@ def crop_image(DATE, SAVE_DIR, APP_DATA, IMAGE_QUALITY, IMAGE_MIN_SIZE,
     except (FileNotFoundError, PermissionError, OSError):
         raise SystemExit(1)
     apod_filename = crop_apod_filename
-    append_data(DATE, APP_DATA, FIELD_NAMES, "", "", "", "", apod_filename,
-                "", "crop")
+    append_data(DATE, APP_DATA, FIELD_NAMES, "", "", "", "", "", apod_filename,
+                "", "", "", "crop")
     return apod_filename
 
 
@@ -385,20 +353,24 @@ def write_data_header(APP_DATA, FIELD_NAMES):
 
 
 def append_data(DATE, APP_DATA, FIELD_NAMES, apod_date, apod_title,
-                apod_explanation, apod_html, apod_filename, apod_copyright,
-                apod_category):
+                apod_explanation, apod_html, apod_url, apod_filename,
+                apod_WxH, apod_size, apod_copyright, apod_category):
     '''Append data to the data file.'''
     try:
         with open(APP_DATA, "a", newline="") as data_file:
             writer = csv.DictWriter(data_file, fieldnames=FIELD_NAMES)
-            writer.writerow({"apod-date": apod_date,
-                             "title": apod_title,
-                             "explanation": apod_explanation,
-                             "html-url": apod_html,
-                             "filename": apod_filename,
-                             "copyright": apod_copyright,
-                             "uid": DATE,
-                             "category": apod_category})
+            writer.writerow({
+                "apod-date": apod_date,
+                "title": apod_title,
+                "explanation": apod_explanation,
+                "html-url": apod_html,
+                "img-url": apod_url,
+                "filename": apod_filename,
+                "image-WxH": apod_WxH,
+                "image-size": apod_size,
+                "copyright": apod_copyright,
+                "uid": DATE,
+                "category": apod_category})
     except (csv.Error, PermissionError, OSError):
         raise SystemExit(1)
 
@@ -496,9 +468,10 @@ def main():
     conf = ConfigParser()
     conf.read(HOME + "/.config/APODWall/config")
     apod_category = "orig"
-    DATE = datetime.now().strftime("%Y%m%d%H%M%S")
-    FIELD_NAMES = ["apod-date", "title", "explanation", "html-url", "filename",
-                   "copyright", "uid", "category"]
+    DATE = datetime.now().strftime("%Y%m%d%H%M%S%f")
+    FIELD_NAMES = ["apod-date", "title", "explanation", "html-url", "img-url",
+                   "filename", "image-WxH", "image-size",  "copyright", "uid",
+                   "category"]
     SAVE_DIR = HOME + conf.get("GENERAL", "SAVE_DIR", fallback="")
     THUMBNAIL_DIR = HOME + conf.get("GENERAL", "THUMBNAIL_DIR", fallback="")
     APP_DATA = HOME + conf.get("GENERAL", "APP_DATA", fallback="")
@@ -515,24 +488,33 @@ def main():
     API_KEY = conf.get("NASA", "API_KEY", fallback="")
     RESP_URL = "https://api.nasa.gov/planetary/apod?api_key=" + API_KEY
     resp = test_connection(RESP_URL)
+
     check_data_header(APP_DATA, FIELD_NAMES)
     (apod_date, apod_title, apod_explanation, apod_url, apod_filename,
      apod_copyright, apod_html) = formulate_data(APP_DATA, IMAGE_QUALITY,
                                                  API_KEY, FIELD_NAMES, resp)
-    download_apod(DATE, SAVE_DIR, THUMBNAIL_DIR, APP_DATA, IMAGE_QUALITY,
-                  IMAGE_MIN_SIZE, API_KEY, FIELD_NAMES, apod_date, apod_title,
-                  apod_explanation, apod_url, apod_filename, apod_copyright,
-                  apod_html, apod_category)
+    download_apod(SAVE_DIR, apod_url, apod_filename)
+
+    while verify_dimensions(DATE, SAVE_DIR, IMAGE_MIN_SIZE, apod_filename):
+        create_thumbnail(DATE, SAVE_DIR, THUMBNAIL_DIR, APP_DATA, FIELD_NAMES,
+                         apod_date, apod_title, apod_explanation, apod_html,
+                         apod_url, apod_filename, apod_copyright)
+        append_data(DATE, APP_DATA, FIELD_NAMES, "", "", "", "", "",
+                    apod_filename, "", "", "", "tmp")
+        (apod_date, apod_title, apod_explanation, apod_url, apod_filename,
+         apod_copyright, apod_html) = (formulate_data(APP_DATA,
+                                       IMAGE_QUALITY, API_KEY, FIELD_NAMES,
+                                       generate_data(API_KEY)))
+        download_apod(SAVE_DIR, apod_url, apod_filename)
+
     create_thumbnail(DATE, SAVE_DIR, THUMBNAIL_DIR, APP_DATA, FIELD_NAMES,
                      apod_date, apod_title, apod_explanation, apod_html,
-                     apod_filename, apod_copyright)
-    append_data(DATE, APP_DATA, FIELD_NAMES, "", "", "", "", apod_filename,
-                "", apod_category)
+                     apod_url, apod_filename, apod_copyright)
+    append_data(DATE, APP_DATA, FIELD_NAMES, "", "", "", "", "", apod_filename,
+                "", "", "", apod_category)
     apod_filename = crop_image(DATE, SAVE_DIR, APP_DATA, IMAGE_QUALITY,
-                               IMAGE_MIN_SIZE, IMAGE_CROP_RATIO, API_KEY,
-                               FIELD_NAMES, resp, apod_url, apod_date,
-                               apod_title, apod_explanation, apod_html,
-                               apod_filename, apod_copyright)
+                               IMAGE_MIN_SIZE, IMAGE_CROP_RATIO, FIELD_NAMES,
+                               apod_filename)
     set_background(SAVE_DIR, IMAGE_QUALITY, CUSTOM_CMD, CUSTOM_ENV_VAR,
                    apod_filename)
     dir_cleanup(DATE, APP_DATA, DATA_SIZE, HISTORY_SIZE, SAVE_DIR,
