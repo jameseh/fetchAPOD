@@ -14,11 +14,31 @@ import re
 import csv
 from PIL import Image
 from pathlib import Path
-from configparser import ConfigParser
 from datetime import datetime
 from json import loads, decoder
 
 import requests
+
+from config import SetupConfig
+
+
+CONF = SetupConfig()
+HOME = CONF.HOME
+FIELD_NAMES = CONF.FIELD_NAMES
+IMAGE_DIR = HOME + CONF.IMAGE_DIR
+TIMG_DIR = HOME + CONF.TIMG_DIR
+DATA_FILE = HOME + CONF.DATA_FILE
+TIMG_SAVE = CONF.TIMG_SAVE
+ORIG_SAVE = CONF.ORIG_SAVE
+CROP_SAVE = CONF.CROP_SAVE
+TMP_SAVE = CONF.TMP_SAVE
+QUALITY = CONF.QUALITY
+MIN_SIZE = CONF.MIN_SIZE
+CROP_RATIO = CONF.CROP_RATIO
+CUSTOM_CMD = CONF.CUSTOM_CMD
+CUSTOM_ENV = CONF.CUSTOM_ENV
+API_KEY = CONF.API_KEY
+RESP_URL = "https://api.nasa.gov/planetary/apod?api_key=" + API_KEY
 
 
 def test_connection(RESP_URL):
@@ -55,7 +75,7 @@ def generate_data(API_KEY):
     return resp
 
 
-def formulate_data(APP_DATA, IMAGE_QUALITY, API_KEY, FIELD_NAMES, resp):
+def formulate_data(DATA_FILE, QUALITY, API_KEY, FIELD_NAMES, resp):
     '''
     Check if an image is in the response text. If the filename is in the
     data file run the function generate_data to get a new APOD.
@@ -73,7 +93,7 @@ def formulate_data(APP_DATA, IMAGE_QUALITY, API_KEY, FIELD_NAMES, resp):
         apod_filename = re.search(regex_string, apod_url, re.I).group(1)
         hd_apod_filename = re.search(regex_string, hd_apod_url, re.I).group(1)
     except (decoder.JSONDecodeError, re.error, KeyError, AttributeError):
-        return formulate_data(APP_DATA, IMAGE_QUALITY, API_KEY, FIELD_NAMES,
+        return formulate_data(DATA_FILE, QUALITY, API_KEY, FIELD_NAMES,
                               generate_data(API_KEY))
     try:
         apod_copyright = resp_dict["copyright"]
@@ -81,22 +101,22 @@ def formulate_data(APP_DATA, IMAGE_QUALITY, API_KEY, FIELD_NAMES, resp):
         pass
     apod_html = ("https://apod.nasa.gov/apod/ap{}.html".format(
                  apod_date[2:].replace("-", "")))
-    if IMAGE_QUALITY.lower() == "hd":
+    if QUALITY.lower() == "hd":
         apod_filename = hd_apod_filename
         apod_url = hd_apod_url
     for char in escape_list:
         if char in apod_filename:
             apod_filename = apod_filename.replace(char, "")
-    reader = read_data_rows(APP_DATA, FIELD_NAMES)
+    reader = read_data_rows(DATA_FILE, FIELD_NAMES)
     for row in reader:
         if apod_filename in row["filename"]:
-            return formulate_data(APP_DATA, IMAGE_QUALITY, API_KEY,
+            return formulate_data(DATA_FILE, QUALITY, API_KEY,
                                   FIELD_NAMES, generate_data(API_KEY))
     return (apod_date, apod_title, apod_explanation, apod_url, apod_filename,
             apod_copyright, apod_html)
 
 
-def download_apod(SAVE_DIR, apod_url, apod_filename):
+def download_apod(IMAGE_DIR, apod_url, apod_filename):
     '''
     Download an APOD. Call functions to check the header and then a function
     to append the apod data to the data file.
@@ -106,27 +126,27 @@ def download_apod(SAVE_DIR, apod_url, apod_filename):
     resp = test_connection(apod_url)
     resp.raw.decode_content = True
     try:
-        with open("{}{}".format(SAVE_DIR, apod_filename), "wb") as d:
+        with open("{}{}".format(IMAGE_DIR, apod_filename), "wb") as d:
             d.write(resp.content)
     except (PermissionError, OSError):
         raise SystemExit(1)
 
 
-def set_background(SAVE_DIR, IMAGE_QUALITY, CUSTOM_CMD, CUSTOM_ENV_VAR,
+def set_background(IMAGE_DIR, QUALITY, CUSTOM_CMD, CUSTOM_ENV,
                    apod_filename):
     '''
     Set the downloaded APOD as wallpaper. Determine the users
     $XDG_CURRENT_DESKTOP if on linux, if on windows or mac use sys to
     check platform.
     '''
-    background_path = SAVE_DIR + apod_filename
+    background_path = IMAGE_DIR + apod_filename
     wallpaper_cmd = ""
     check_desktop_var = "XDG_CURRENT_DESKTOP"
     if CUSTOM_CMD.strip() != "":
         wallpaper_cmd = CUSTOM_CMD
     else:
-        if CUSTOM_ENV_VAR.strip() != "":
-            check_desktop_var = CUSTOM_ENV_VAR
+        if CUSTOM_ENV.strip() != "":
+            check_desktop_var = CUSTOM_ENV
         check_desktop = str(subprocess.check_output("echo ${}".format(
                             check_desktop_var), shell=True)).lower()
         gnome_list = ["gnome", "unity", "budgie-desktop", "lubuntu"]
@@ -250,15 +270,18 @@ def make_url(API_KEY, rand_year, rand_month, rand_day):
     return (rand_url, rand_apod_date)
 
 
-def verify_dimensions(DATE, SAVE_DIR, IMAGE_MIN_SIZE, apod_filename):
+def verify_dimensions(IMAGE_DIR, MIN_SIZE, apod_filename):
     '''
     Verify the APOD images dimensions. If the images are less than
-    the value of IMAGE_MIN_SIZE return False.
+    the value of MIN_SIZE return False.
     '''
-    image_min_size = IMAGE_MIN_SIZE.split("x")
-    min_width, min_height = image_min_size[0], image_min_size[1]
+    image_min_size = MIN_SIZE.split("x")
     try:
-        wallpaper = Image.open(SAVE_DIR + apod_filename)
+        min_width, min_height = image_min_size[0], image_min_size[1]
+    except IndexError:
+        min_width, min_height = (0, 0)
+    try:
+        wallpaper = Image.open(IMAGE_DIR + apod_filename)
         width = wallpaper.width
         height = wallpaper.height
     except (FileNotFoundError, PermissionError, OSError):
@@ -267,33 +290,33 @@ def verify_dimensions(DATE, SAVE_DIR, IMAGE_MIN_SIZE, apod_filename):
         return True
 
 
-def create_thumbnail(DATE, SAVE_DIR, THUMBNAIL_DIR, APP_DATA, FIELD_NAMES,
+def create_thumbnail(date_time, IMAGE_DIR, TIMG_DIR, DATA_FILE, FIELD_NAMES,
                      apod_date, apod_title, apod_explanation, apod_html,
                      apod_url, apod_filename, apod_copyright):
     '''Create a thumbnail of an APOD.'''
     try:
-        apod_size = Path(SAVE_DIR + apod_filename).stat().st_size
-        wallpaper = Image.open(SAVE_DIR + apod_filename)
+        apod_size = Path(IMAGE_DIR + apod_filename).stat().st_size
+        wallpaper = Image.open(IMAGE_DIR + apod_filename)
         apod_WxH = "{}x{}".format(str(wallpaper.width), str(wallpaper.height))
         wallpaper.thumbnail((310, 310))
         apod_filename_timg = apod_filename.split(".")[0] + "-thumbnail.PNG"
-        wallpaper.save(THUMBNAIL_DIR + apod_filename_timg)
+        wallpaper.save(TIMG_DIR + apod_filename_timg)
     except (FileNotFoundError, PermissionError, OSError):
         raise SystemExit(1)
-    append_data(DATE, APP_DATA, FIELD_NAMES, apod_date, apod_title,
+    append_data(date_time, DATA_FILE, FIELD_NAMES, apod_date, apod_title,
                 apod_explanation, apod_html, apod_url, apod_filename, apod_WxH,
                 apod_size, apod_copyright, "timg")
 
 
-def crop_image(DATE, SAVE_DIR, APP_DATA, IMAGE_QUALITY, IMAGE_MIN_SIZE,
-               IMAGE_CROP_RATIO, FIELD_NAMES, apod_filename):
+def crop_image(date_time, IMAGE_DIR, DATA_FILE, QUALITY, MIN_SIZE,
+               CROP_RATIO, FIELD_NAMES, apod_filename):
     '''
     Crop the image to a specific aspect ratio.
     '''
-    crop_ratio = IMAGE_CROP_RATIO.split(":")
+    crop_ratio = CROP_RATIO.split(":")
     crop_ratio = int(crop_ratio[1]) / int(crop_ratio[0])
     try:
-        wallpaper = Image.open(SAVE_DIR + apod_filename)
+        wallpaper = Image.open(IMAGE_DIR + apod_filename)
         width = wallpaper.width
         height = wallpaper.height
     except (FileNotFoundError, PermissionError, OSError):
@@ -316,48 +339,48 @@ def crop_image(DATE, SAVE_DIR, APP_DATA, IMAGE_QUALITY, IMAGE_MIN_SIZE,
     crop_apod_filename = (crop_apod_filename[0] + "-crop."
                           + crop_apod_filename[1])
     try:
-        with Image.open(SAVE_DIR + apod_filename) as wallpaper:
+        with Image.open(IMAGE_DIR + apod_filename) as wallpaper:
             crop = wallpaper.crop((left, bottom, right, top))
-            crop.save(SAVE_DIR + crop_apod_filename)
+            crop.save(IMAGE_DIR + crop_apod_filename)
     except (FileNotFoundError, PermissionError, OSError):
         raise SystemExit(1)
     apod_filename = crop_apod_filename
-    append_data(DATE, APP_DATA, FIELD_NAMES, "", "", "", "", "", apod_filename,
-                "", "", "", "crop")
+    append_data(date_time, DATA_FILE, FIELD_NAMES, "", "", "", "", "",
+                apod_filename, "", "", "", "crop")
     return apod_filename
 
 
-def check_data_header(APP_DATA, FIELD_NAMES):
+def check_data_header(DATA_FILE, FIELD_NAMES):
     '''
     Check if header exists on data file, if not call function to write the
     header
     '''
     try:
-        with open(APP_DATA, "r") as data_file:
+        with open(DATA_FILE, "r") as data_file:
             reader = data_file.readline()
             field_names = ",".join(FIELD_NAMES)
             if field_names not in reader:
-                return write_data_header(APP_DATA, FIELD_NAMES)
+                return write_data_header(DATA_FILE, FIELD_NAMES)
     except (csv.Error, FileNotFoundError, PermissionError, OSError):
-        return write_data_header(APP_DATA, FIELD_NAMES)
+        return write_data_header(DATA_FILE, FIELD_NAMES)
 
 
-def write_data_header(APP_DATA, FIELD_NAMES):
+def write_data_header(DATA_FILE, FIELD_NAMES):
     '''Write data file header with field names.'''
     try:
-        with open(APP_DATA, "w", newline="") as data_file:
+        with open(DATA_FILE, "w", newline="") as data_file:
             writer = csv.DictWriter(data_file, fieldnames=FIELD_NAMES)
             writer.writeheader()
     except (csv.Error, PermissionError, OSError):
         raise SystemExit(1)
 
 
-def append_data(DATE, APP_DATA, FIELD_NAMES, apod_date, apod_title,
+def append_data(date_time, DATA_FILE, FIELD_NAMES, apod_date, apod_title,
                 apod_explanation, apod_html, apod_url, apod_filename,
                 apod_WxH, apod_size, apod_copyright, apod_category):
     '''Append data to the data file.'''
     try:
-        with open(APP_DATA, "a", newline="") as data_file:
+        with open(DATA_FILE, "a", newline="") as data_file:
             writer = csv.DictWriter(data_file, fieldnames=FIELD_NAMES)
             writer.writerow({
                 "apod-date": apod_date,
@@ -369,16 +392,16 @@ def append_data(DATE, APP_DATA, FIELD_NAMES, apod_date, apod_title,
                 "image-WxH": apod_WxH,
                 "image-size": apod_size,
                 "copyright": apod_copyright,
-                "uid": DATE,
+                "uid": date_time,
                 "category": apod_category})
     except (csv.Error, PermissionError, OSError):
         raise SystemExit(1)
 
 
-def write_data_rows(APP_DATA, FIELD_NAMES, *arg):
+def write_data_rows(DATA_FILE, FIELD_NAMES, *arg):
     '''Write a new data file from a list.'''
     try:
-        with open(APP_DATA, "w", newline="") as data_file:
+        with open(DATA_FILE, "w", newline="") as data_file:
             writer = csv.DictWriter(data_file, fieldnames=FIELD_NAMES)
             writer.writeheader()
             writer.writerows(*arg)
@@ -386,11 +409,11 @@ def write_data_rows(APP_DATA, FIELD_NAMES, *arg):
         raise SystemExit(1)
 
 
-def read_data_rows(APP_DATA, FIELD_NAMES):
+def read_data_rows(DATA_FILE, FIELD_NAMES):
     '''Read data file, return a list of dictionaries sorted by UID'''
     data_rows = []
     try:
-        with open(APP_DATA, "r", newline="") as data_file:
+        with open(DATA_FILE, "r", newline="") as data_file:
             reader = csv.DictReader(data_file, FIELD_NAMES)
             [data_rows.append(row) for row in reader]
             data_rows = [data_rows[0]] + sorted(data_rows[1:], key=lambda
@@ -401,9 +424,8 @@ def read_data_rows(APP_DATA, FIELD_NAMES):
         raise SystemExit(1)
 
 
-def dir_cleanup(DATE, APP_DATA, DATA_SIZE, HISTORY_SIZE, SAVE_DIR,
-                THUMBNAIL_DIR, KEEP_SAVED, CROP_SAVED, TMP_SAVED,
-                FIELD_NAMES):
+def dir_cleanup(date_time, DATA_FILE, TIMG_SAVE, IMAGE_DIR, TIMG_DIR,
+                ORIG_SAVE, CROP_SAVE, TMP_SAVE, FIELD_NAMES):
     '''
     Clean up directory to specified amount of images, delete oldest first.
     '''
@@ -416,7 +438,7 @@ def dir_cleanup(DATE, APP_DATA, DATA_SIZE, HISTORY_SIZE, SAVE_DIR,
     tmp_rows = []
     orig_rows = []
     delete_rows = []
-    reader = read_data_rows(APP_DATA, FIELD_NAMES)
+    reader = read_data_rows(DATA_FILE, FIELD_NAMES)
     for row in reader:
         if row["category"] in {"timg"}:
             timg_rows.append(row)
@@ -424,102 +446,80 @@ def dir_cleanup(DATE, APP_DATA, DATA_SIZE, HISTORY_SIZE, SAVE_DIR,
             crop_rows.append(row)
         elif row["category"] in {"tmp"}:
             tmp_rows.append(row)
+        elif date_time[:8] in row["apod-date"].replace("-", ""):
+            data_rows.append(row)
         elif row['category'] in {"orig"}:
             orig_rows.append(row)
     for row in orig_rows:
-        if row in orig_rows[:int(KEEP_SAVED)]:
+        if row in orig_rows[:int(ORIG_SAVE)]:
             data_rows.append(row)
         else:
             delete_rows.append(row)
     for row in timg_rows:
-        if row in timg_rows[:int(HISTORY_SIZE)]:
+        if row in timg_rows[:int(TIMG_SAVE)]:
             data_rows.append(row)
         else:
             delete_rows.append(row)
     for row in crop_rows:
-        if row in crop_rows[:int(CROP_SAVED)]:
+        if row in crop_rows[:int(CROP_SAVE)]:
             data_rows.append(row)
         else:
             delete_rows.append(row)
     for row in tmp_rows:
-        if row in tmp_rows[:int(TMP_SAVED)]:
+        if row in tmp_rows[:int(TMP_SAVE)]:
             data_rows.append(row)
         else:
             delete_rows.append(row)
     for apod_filename in delete_rows:
         if row["category"] in {"timg"}:
-            delete_file(THUMBNAIL_DIR, apod_filename["filename"])
+            delete_file(TIMG_DIR, apod_filename["filename"])
         else:
-            delete_file(SAVE_DIR, apod_filename["filename"])
-    write_data_rows(APP_DATA, FIELD_NAMES, data_rows)
+            delete_file(IMAGE_DIR, apod_filename["filename"])
+    write_data_rows(DATA_FILE, FIELD_NAMES, data_rows)
     return SystemExit(0)
 
 
-def delete_file(SAVE_DIR, apod_filename):
+def delete_file(IMAGE_DIR, apod_filename):
     '''Delete file. Takes a path and a filename as arguments.'''
     try:
-        os.remove(SAVE_DIR + apod_filename)
+        os.remove(IMAGE_DIR + apod_filename)
     except FileNotFoundError as e:
         print(e)
 
 
 def main():
-    HOME = str(Path.home())
-    conf = ConfigParser()
-    conf.read(HOME + "/.config/APODWall/config")
+    date_time = str(datetime.now().strftime("%Y%m%d%H%M%S%f"))
     apod_category = "orig"
-    DATE = datetime.now().strftime("%Y%m%d%H%M%S%f")
-    FIELD_NAMES = ["apod-date", "title", "explanation", "html-url", "img-url",
-                   "filename", "image-WxH", "image-size",  "copyright", "uid",
-                   "category"]
-    SAVE_DIR = HOME + conf.get("GENERAL", "SAVE_DIR", fallback="")
-    THUMBNAIL_DIR = HOME + conf.get("GENERAL", "THUMBNAIL_DIR", fallback="")
-    APP_DATA = HOME + conf.get("GENERAL", "APP_DATA", fallback="")
-    DATA_SIZE = conf.get("GENERAL", "DATA_SIZE", fallback="100")
-    HISTORY_SIZE = conf.get("GENERAL", "HISTORY_SIZE", fallback="100")
-    KEEP_SAVED = conf.get("GENERAL", "KEEP_SAVED", fallback="5")
-    CROP_SAVED = conf.get("GENERAL", "CROP_SAVED", fallback="1")
-    TMP_SAVED = conf.get("GENERAL", "CROP_SAVED", fallback="0")
-    IMAGE_QUALITY = conf.get("IMAGE", "IMAGE_QUALITY", fallback="hd")
-    IMAGE_MIN_SIZE = conf.get("IMAGE", "IMAGE_MIN_SIZE", fallback="1366x768")
-    IMAGE_CROP_RATIO = conf.get("IMAGE", "IMAGE_CROP_RATIO", fallback="6:9")
-    CUSTOM_CMD = conf.get("CUSTOM", "CUSTOM_CMD", fallback="")
-    CUSTOM_ENV_VAR = conf.get("CUSTOM", "CUSTOM_ENV_VAR", fallback="")
-    API_KEY = conf.get("NASA", "API_KEY", fallback="")
-    RESP_URL = "https://api.nasa.gov/planetary/apod?api_key=" + API_KEY
     resp = test_connection(RESP_URL)
-
-    check_data_header(APP_DATA, FIELD_NAMES)
+    check_data_header(DATA_FILE, FIELD_NAMES)
     (apod_date, apod_title, apod_explanation, apod_url, apod_filename,
-     apod_copyright, apod_html) = formulate_data(APP_DATA, IMAGE_QUALITY,
-                                                 API_KEY, FIELD_NAMES, resp)
-    download_apod(SAVE_DIR, apod_url, apod_filename)
+     apod_copyright, apod_html) = formulate_data(DATA_FILE, QUALITY, API_KEY,
+                                                 FIELD_NAMES, resp)
+    download_apod(IMAGE_DIR, apod_url, apod_filename)
 
-    while verify_dimensions(DATE, SAVE_DIR, IMAGE_MIN_SIZE, apod_filename):
-        create_thumbnail(DATE, SAVE_DIR, THUMBNAIL_DIR, APP_DATA, FIELD_NAMES,
-                         apod_date, apod_title, apod_explanation, apod_html,
-                         apod_url, apod_filename, apod_copyright)
-        append_data(DATE, APP_DATA, FIELD_NAMES, "", "", "", "", "",
+    while verify_dimensions(IMAGE_DIR, MIN_SIZE, apod_filename):
+        create_thumbnail(date_time, IMAGE_DIR, TIMG_DIR, DATA_FILE,
+                         FIELD_NAMES, apod_date, apod_title, apod_explanation,
+                         apod_html, apod_url, apod_filename, apod_copyright)
+        append_data(date_time, DATA_FILE, FIELD_NAMES, "", "", "", "", "",
                     apod_filename, "", "", "", "tmp")
         (apod_date, apod_title, apod_explanation, apod_url, apod_filename,
-         apod_copyright, apod_html) = (formulate_data(APP_DATA,
-                                       IMAGE_QUALITY, API_KEY, FIELD_NAMES,
+         apod_copyright, apod_html) = (formulate_data(DATA_FILE, QUALITY,
+                                       API_KEY, FIELD_NAMES,
                                        generate_data(API_KEY)))
-        download_apod(SAVE_DIR, apod_url, apod_filename)
+        download_apod(IMAGE_DIR, apod_url, apod_filename)
 
-    create_thumbnail(DATE, SAVE_DIR, THUMBNAIL_DIR, APP_DATA, FIELD_NAMES,
+    create_thumbnail(date_time, IMAGE_DIR, TIMG_DIR, DATA_FILE, FIELD_NAMES,
                      apod_date, apod_title, apod_explanation, apod_html,
                      apod_url, apod_filename, apod_copyright)
-    append_data(DATE, APP_DATA, FIELD_NAMES, "", "", "", "", "", apod_filename,
-                "", "", "", apod_category)
-    apod_filename = crop_image(DATE, SAVE_DIR, APP_DATA, IMAGE_QUALITY,
-                               IMAGE_MIN_SIZE, IMAGE_CROP_RATIO, FIELD_NAMES,
+    append_data(date_time, DATA_FILE, FIELD_NAMES, apod_date, "", "", "", "",
+                apod_filename, "", "", "", apod_category)
+    apod_filename = crop_image(date_time, IMAGE_DIR, DATA_FILE, QUALITY,
+                               MIN_SIZE, CROP_RATIO, FIELD_NAMES,
                                apod_filename)
-    set_background(SAVE_DIR, IMAGE_QUALITY, CUSTOM_CMD, CUSTOM_ENV_VAR,
-                   apod_filename)
-    dir_cleanup(DATE, APP_DATA, DATA_SIZE, HISTORY_SIZE, SAVE_DIR,
-                THUMBNAIL_DIR, KEEP_SAVED, CROP_SAVED,
-                TMP_SAVED, FIELD_NAMES)
+    set_background(IMAGE_DIR, QUALITY, CUSTOM_CMD, CUSTOM_ENV, apod_filename)
+    dir_cleanup(date_time, DATA_FILE, TIMG_SAVE, IMAGE_DIR, TIMG_DIR,
+                ORIG_SAVE, CROP_SAVE, TMP_SAVE, FIELD_NAMES)
     SystemExit(0)
 
 
