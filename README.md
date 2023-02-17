@@ -20,6 +20,8 @@ python 3.11 +:
 + pillow
 
 python 3.10 <:
++ requests
++ pillow
 + tomllib
 
 
