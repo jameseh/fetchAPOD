@@ -1,2 +1,25 @@
 # APODWall
-WIP APOD wallpaper program. Currently does not have a GUI. Can set the daily apod as wallpaper if the daily has been set already set a random apod. Tons of settings, aspect ratio to crop, min image size to set as bg, etc. Saves a csv format log of all images downloaded, including what didn't make it past min size check. Works on any operating system. MIT license, feel free to do whatever you want with the code. 
+APODWall is a low dependancy, multi-platform application for downloading the Astronomy Picture of the Day, and setting it as desktop wallpaper. If the day's APOD has already been downloaded it generates a random APOD.
+
+Some of the customability options:
++ image quality
++ crop ratio (crop image to resolution before setting as wallpaper)
++ minimum starting size of image to set as a wallpaper
++ where and how much of everything to save/keep logged.
+
+**APODWall is a WIP personal project using MIT license. Some things included in the program may be a placholder for future plans. I do my best will keep the functuality working on the master branch. The programs design may change durastically.
+
+**Installation:**
++ Copy APODWall.py, config, and config.py to the directory you want to install in.
++ Edit config to your needs/liking.
++ Run.
+
+**Dependancies**
+>= python 3.11
++ requests
++ pillow
+
+< python 3.11:
++ tomllib
+
+

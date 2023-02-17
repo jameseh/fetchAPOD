@@ -12,22 +12,21 @@ import subprocess
 import random
 import re
 import csv
-from PIL import Image
 from pathlib import Path
 from datetime import datetime
 from json import loads, decoder
 
+from PIL import Image
 import requests
 
 from config import SetupConfig
 
 
 CONF = SetupConfig()
-HOME = CONF.HOME
 FIELD_NAMES = CONF.FIELD_NAMES
-IMAGE_DIR = HOME + CONF.IMAGE_DIR
-TIMG_DIR = HOME + CONF.TIMG_DIR
-DATA_FILE = HOME + CONF.DATA_FILE
+IMAGE_DIR = CONF.IMAGE_DIR
+TIMG_DIR = CONF.TIMG_DIR
+DATA_FILE = CONF.DATA_FILE
 TIMG_SAVE = CONF.TIMG_SAVE
 ORIG_SAVE = CONF.ORIG_SAVE
 CROP_SAVE = CONF.CROP_SAVE

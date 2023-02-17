@@ -1,5 +1,7 @@
 # ** SKELETON CONFIGUREATION FILE FOR APODWall 
 # ** Leave the custom section blank if not using custom options.
+# NOTE: PATHS ARE RELATIVE TO WHERE CONFIG.PY AND APODWALL.PY ARE LOCATED.
+#       USE A SLASH TO USE AN ABSOLUTE PATH.
 # IMAGE_DIR - Location to save all image types besides thumbnails.
 # TIMG_DIR - Location to save thumbnails.
 # DATA_FILE - Location the data file saves to.
@@ -17,9 +19,9 @@
 title = "User_Settings"
 
 [GENERAL]
-IMAGE_DIR = "/path/wallpapers"
-TIMG_DIR = "/path/wallpapers/thumbnails"
-DATA_FILE = "/path/data/file"
+IMAGE_DIR = "path/wallpapers"
+TIMG_DIR = "path/wallpapers/thumbnails"
+DATA_FILE = "path/data/file"
 ORIG_SAVE = 10
 TIMG_SAVE = 100
 CROP_SAVE = 1
