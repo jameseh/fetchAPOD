@@ -15,7 +15,7 @@ class SetupConfig:
                            "img-WxH": "", "img-size": "", "copyright": "",
                            "uid": "", "category": []}
         try:
-            with open(Path.cwd().joinpath("config"), "rb") as config:
+            with open(Path.cwd().joinpath("config.toml"), "rb") as config:
                 self.conf = tomllib.load(config)
         except (tomllib.TOMLDecodeError, FileNotFoundError,
                 PermissionError, OSError, AttributeError) as e:
