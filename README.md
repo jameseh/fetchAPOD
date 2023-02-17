@@ -15,11 +15,11 @@ APODWall is a low dependancy, multi-platform application for downloading the Ast
 + Run.
 
 ## **Dependancies**
->= python 3.11
+python 3.11 +:
 + requests
 + pillow
 
-< python 3.11:
+python 3.10 <:
 + tomllib
 
 
