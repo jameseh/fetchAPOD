@@ -39,6 +39,7 @@ CUSTOM_CMD = CONF.CUSTOM_CMD
 CUSTOM_ENV = CONF.CUSTOM_ENV
 API_KEY = CONF.API_KEY
 RESP_URL = "https://api.nasa.gov/planetary/apod?api_key=" + API_KEY
+field_dict = CONF.field_dict
 
 
 def test_connection(RESP_URL):
@@ -75,71 +76,71 @@ def generate_data(API_KEY):
     return resp
 
 
-def formulate_data(DATA_FILE, QUALITY, API_KEY, FIELD_NAMES, resp):
+def formulate_data(DATA_FILE, QUALITY, API_KEY, FIELD_NAMES, field_dict,
+                   date_time, resp):
     '''
     Check if an image is in the response text. If the filename is in the
     data file run the function generate_data to get a new APOD.
     '''
     escape_list = ["(", ")", "{", "}"]
     regex_string = r"image/[0-9]{4}/(.*\.(jpg|jpeg|png))"
-    apod_copyright = ""
     try:
         resp_dict = loads(resp.text)
-        apod_date = resp_dict["date"]
-        apod_title = resp_dict["title"]
-        apod_explanation = resp_dict["explanation"]
-        apod_url = resp_dict["url"]
-        hd_apod_url = resp_dict["hdurl"]
-        apod_filename = re.search(regex_string, apod_url, re.I).group(1)
-        hd_apod_filename = re.search(regex_string, hd_apod_url, re.I).group(1)
+        field_dict["uid"] = date_time
+        field_dict["date"] = resp_dict["date"]
+        field_dict["title"] = resp_dict["title"]
+        field_dict["explanation"] = resp_dict["explanation"]
+        field_dict["img-url"] = resp_dict["url"]
+        field_dict["filename"] = re.search(regex_string, resp_dict["url"],
+                                           re.I).group(1)
+        hd_apod_filename = re.search(regex_string, resp_dict["hdurl"],
+                                     re.I).group(1)
     except (decoder.JSONDecodeError, re.error, KeyError, AttributeError):
         return formulate_data(DATA_FILE, QUALITY, API_KEY, FIELD_NAMES,
-                              generate_data(API_KEY))
+                              field_dict, date_time, generate_data(API_KEY))
     try:
-        apod_copyright = resp_dict["copyright"]
+        field_dict["copyright"] = resp_dict["copyright"]
     except KeyError:
         pass
-    apod_html = ("https://apod.nasa.gov/apod/ap{}.html".format(
-                 apod_date[2:].replace("-", "")))
+    field_dict["html"] = ("https://apod.nasa.gov/apod/ap{}.html".format(
+                              field_dict["date"][2:].replace("-", "")))
     if QUALITY.lower() == "hd":
-        apod_filename = hd_apod_filename
-        apod_url = hd_apod_url
+        field_dict["img-url"] = resp_dict["hdurl"]
+        field_dict["filename"] = hd_apod_filename
     for char in escape_list:
-        if char in apod_filename:
-            apod_filename = apod_filename.replace(char, "")
+        if char in field_dict["filename"]:
+            field_dict["filename"].replace(char, "")
     reader = read_data_rows(DATA_FILE, FIELD_NAMES)
     for row in reader:
-        if apod_filename in row["filename"]:
-            return formulate_data(DATA_FILE, QUALITY, API_KEY,
-                                  FIELD_NAMES, generate_data(API_KEY))
-    return (apod_date, apod_title, apod_explanation, apod_url, apod_filename,
-            apod_copyright, apod_html)
+        if field_dict["filename"] in row["filename"]:
+            return formulate_data(DATA_FILE, QUALITY, API_KEY, FIELD_NAMES,
+                                  field_dict, date_time, 
+                                  generate_data(API_KEY))
 
 
-def download_apod(IMAGE_DIR, apod_url, apod_filename):
+def download_apod(IMAGE_DIR, field_dict):
     '''
     Download an APOD. Call functions to check the header and then a function
     to append the apod data to the data file.
     '''
     # Open the response and download the image. Open the data file and
     # append the filename to the file.
-    resp = test_connection(apod_url)
+    resp = test_connection(field_dict["img-url"])
     resp.raw.decode_content = True
     try:
-        with open("{}{}".format(IMAGE_DIR, apod_filename), "wb") as d:
+        with open(IMAGE_DIR + field_dict["filename"], "wb") as d:
             d.write(resp.content)
     except (PermissionError, OSError):
         raise SystemExit(1)
 
 
-def set_background(IMAGE_DIR, QUALITY, CUSTOM_CMD, CUSTOM_ENV,
-                   apod_filename):
+def set_background(IMAGE_DIR, QUALITY, CUSTOM_CMD, CUSTOM_ENV, field_dict):
     '''
     Set the downloaded APOD as wallpaper. Determine the users
     $XDG_CURRENT_DESKTOP if on linux, if on windows or mac use sys to
     check platform.
     '''
-    background_path = IMAGE_DIR + apod_filename
+    background_path = IMAGE_DIR + field_dict["filename"]
     wallpaper_cmd = ""
     check_desktop_var = "XDG_CURRENT_DESKTOP"
     if CUSTOM_CMD.strip() != "":
@@ -270,7 +271,7 @@ def make_url(API_KEY, rand_year, rand_month, rand_day):
     return (rand_url, rand_apod_date)
 
 
-def verify_dimensions(IMAGE_DIR, MIN_SIZE, apod_filename):
+def verify_dimensions(IMAGE_DIR, MIN_SIZE, field_dict):
     '''
     Verify the APOD images dimensions. If the images are less than
     the value of MIN_SIZE return False.
@@ -281,42 +282,41 @@ def verify_dimensions(IMAGE_DIR, MIN_SIZE, apod_filename):
     except IndexError:
         min_width, min_height = (0, 0)
     try:
-        wallpaper = Image.open(IMAGE_DIR + apod_filename)
-        width = wallpaper.width
-        height = wallpaper.height
+        wallpaper = Image.open(IMAGE_DIR + field_dict["filename"])
+        apod_width = wallpaper.width
+        apod_height = wallpaper.height
+        apod_size = Path(IMAGE_DIR + field_dict["filename"]).stat().st_size
+        apod_WxH = "{}x{}".format(str(wallpaper.width), str(wallpaper.height))
+        field_dict["img-WxH"] = apod_WxH
+        field_dict["img-size"] = apod_size
     except (FileNotFoundError, PermissionError, OSError):
         raise SystemExit(1)
-    if int(width) < int(min_width) or int(height) < int(min_height):
+    if int(apod_width) < int(min_width) or int(apod_height) < int(min_height): 
         return True
 
 
-def create_thumbnail(date_time, IMAGE_DIR, TIMG_DIR, DATA_FILE, FIELD_NAMES,
-                     apod_date, apod_title, apod_explanation, apod_html,
-                     apod_url, apod_filename, apod_copyright):
+def create_thumbnail(IMAGE_DIR, TIMG_DIR, DATA_FILE, FIELD_NAMES, field_dict):
     '''Create a thumbnail of an APOD.'''
     try:
-        apod_size = Path(IMAGE_DIR + apod_filename).stat().st_size
-        wallpaper = Image.open(IMAGE_DIR + apod_filename)
-        apod_WxH = "{}x{}".format(str(wallpaper.width), str(wallpaper.height))
+        wallpaper = Image.open(IMAGE_DIR + field_dict["filename"])
         wallpaper.thumbnail((310, 310))
-        apod_filename_timg = apod_filename.split(".")[0] + "-thumbnail.PNG"
-        wallpaper.save(TIMG_DIR + apod_filename_timg)
+        wallpaper.save(TIMG_DIR + field_dict["filename"].split(".")[0]
+                       + "-timg.png")
+        if "timg" not in field_dict["category"]:
+            field_dict["category"].append("timg")
     except (FileNotFoundError, PermissionError, OSError):
         raise SystemExit(1)
-    append_data(date_time, DATA_FILE, FIELD_NAMES, apod_date, apod_title,
-                apod_explanation, apod_html, apod_url, apod_filename, apod_WxH,
-                apod_size, apod_copyright, "timg")
 
 
-def crop_image(date_time, IMAGE_DIR, DATA_FILE, QUALITY, MIN_SIZE,
-               CROP_RATIO, FIELD_NAMES, apod_filename):
+def crop_image(IMAGE_DIR, DATA_FILE, QUALITY, MIN_SIZE, CROP_RATIO,
+               FIELD_NAMES, field_dict):
     '''
     Crop the image to a specific aspect ratio.
     '''
     crop_ratio = CROP_RATIO.split(":")
     crop_ratio = int(crop_ratio[1]) / int(crop_ratio[0])
     try:
-        wallpaper = Image.open(IMAGE_DIR + apod_filename)
+        wallpaper = Image.open(IMAGE_DIR + field_dict["filename"])
         width = wallpaper.width
         height = wallpaper.height
     except (FileNotFoundError, PermissionError, OSError):
@@ -335,19 +335,16 @@ def crop_image(date_time, IMAGE_DIR, DATA_FILE, QUALITY, MIN_SIZE,
         top = bottom + crop_height
         left = left
         right = left + width
-    crop_apod_filename = apod_filename.split(".")
+    crop_apod_filename = field_dict["filename"].split(".")
     crop_apod_filename = (crop_apod_filename[0] + "-crop."
                           + crop_apod_filename[1])
+    field_dict["category"].append("crop")
     try:
-        with Image.open(IMAGE_DIR + apod_filename) as wallpaper:
+        with Image.open(IMAGE_DIR + field_dict["filename"]) as wallpaper:
             crop = wallpaper.crop((left, bottom, right, top))
             crop.save(IMAGE_DIR + crop_apod_filename)
     except (FileNotFoundError, PermissionError, OSError):
         raise SystemExit(1)
-    apod_filename = crop_apod_filename
-    append_data(date_time, DATA_FILE, FIELD_NAMES, "", "", "", "", "",
-                apod_filename, "", "", "", "crop")
-    return apod_filename
 
 
 def check_data_header(DATA_FILE, FIELD_NAMES):
@@ -375,36 +372,34 @@ def write_data_header(DATA_FILE, FIELD_NAMES):
         raise SystemExit(1)
 
 
-def append_data(date_time, DATA_FILE, FIELD_NAMES, apod_date, apod_title,
-                apod_explanation, apod_html, apod_url, apod_filename,
-                apod_WxH, apod_size, apod_copyright, apod_category):
+def append_data(DATA_FILE, FIELD_NAMES, field_dict):
     '''Append data to the data file.'''
     try:
         with open(DATA_FILE, "a", newline="") as data_file:
             writer = csv.DictWriter(data_file, fieldnames=FIELD_NAMES)
             writer.writerow({
-                "apod-date": apod_date,
-                "title": apod_title,
-                "explanation": apod_explanation,
-                "html-url": apod_html,
-                "img-url": apod_url,
-                "filename": apod_filename,
-                "image-WxH": apod_WxH,
-                "image-size": apod_size,
-                "copyright": apod_copyright,
-                "uid": date_time,
-                "category": apod_category})
+                "date": field_dict["date"],
+                "title": field_dict["title"],
+                "explanation": field_dict["explanation"],
+                "html": field_dict["html"],
+                "img-url": field_dict["img-url"],
+                "filename": field_dict["filename"],
+                "img-WxH": field_dict["img-WxH"],
+                "img-size": field_dict["img-size"],
+                "copyright": field_dict["copyright"],
+                "uid": field_dict["uid"],
+                "category": field_dict["category"]})
     except (csv.Error, PermissionError, OSError):
         raise SystemExit(1)
 
 
-def write_data_rows(DATA_FILE, FIELD_NAMES, *arg):
+def write_data_rows(DATA_FILE, FIELD_NAMES, data_rows):
     '''Write a new data file from a list.'''
     try:
         with open(DATA_FILE, "w", newline="") as data_file:
             writer = csv.DictWriter(data_file, fieldnames=FIELD_NAMES)
             writer.writeheader()
-            writer.writerows(*arg)
+            writer.writerows(data_rows)
     except (csv.Error, PermissionError, OSError):
         raise SystemExit(1)
 
@@ -418,63 +413,55 @@ def read_data_rows(DATA_FILE, FIELD_NAMES):
             [data_rows.append(row) for row in reader]
             data_rows = [data_rows[0]] + sorted(data_rows[1:], key=lambda
                                                 item: item["uid"],
-                                                reverse=True)
+                                                reverse=False)
         return data_rows
     except (csv.Error, FileNotFoundError, PermissionError, OSError):
         raise SystemExit(1)
 
 
-def dir_cleanup(date_time, DATA_FILE, TIMG_SAVE, IMAGE_DIR, TIMG_DIR,
-                ORIG_SAVE, CROP_SAVE, TMP_SAVE, FIELD_NAMES):
+def sort_categories(IMAGE_DIR, TIMG_DIR, date_time, data_rows, data_category,
+                    data_save):
+    '''Sort list of dictionaries containing apod data.'''
+    category_rows = []
+    new_data_rows = []
+    [category_rows.append(row) for row in data_rows if data_category in row["category"]] 
+    for row in data_rows:
+        if row in category_rows[:len(category_rows) - int(data_save)]:
+            try:
+                category_list = list(row["category"].strip("][").replace("'", ""
+                                                                         ).split(", "))
+            except AttributeError:
+                category_list = row["category"]
+            category_list.remove(data_category)
+            if len(category_list) != 0:
+                row["category"] = category_list
+                new_data_rows.append(row)
+                if data_category in "timg":
+                    delete_file(TIMG_DIR, row["filename"].split(".")[0]
+                                + "-timg.png")
+                elif data_category in "crop":
+                    crop_filename = row["filename"].split(".")
+                    delete_file(IMAGE_DIR, crop_filename[0] + "-crop."
+                                + crop_filename[1])
+                else:
+                    delete_file(IMAGE_DIR, row["filename"])
+        else:
+            new_data_rows.append(row)
+    return new_data_rows
+
+
+def dir_cleanup(DATA_FILE, TIMG_SAVE, IMAGE_DIR, TIMG_DIR, ORIG_SAVE,
+                CROP_SAVE, TMP_SAVE, FIELD_NAMES, date_time, field_dict):
     '''
-    Clean up directory to specified amount of images, delete oldest first.
+    Clean up directory to specified amount of images.
     '''
-    # Determine if need to delete images. Enumerate the log to determine what
-    # to remove. Remove files over the set limit to keep by finding the range
-    # of the amount of files in the log and subtracting by the amount to save.
-    data_rows = []
-    timg_rows = []
-    crop_rows = []
-    tmp_rows = []
-    orig_rows = []
-    delete_rows = []
-    reader = read_data_rows(DATA_FILE, FIELD_NAMES)
-    for row in reader:
-        if row["category"] in {"timg"}:
-            timg_rows.append(row)
-        elif row["category"] in {"crop"}:
-            crop_rows.append(row)
-        elif row["category"] in {"tmp"}:
-            tmp_rows.append(row)
-        elif date_time[:8] in row["apod-date"].replace("-", ""):
-            data_rows.append(row)
-        elif row['category'] in {"orig"}:
-            orig_rows.append(row)
-    for row in orig_rows:
-        if row in orig_rows[:int(ORIG_SAVE)]:
-            data_rows.append(row)
-        else:
-            delete_rows.append(row)
-    for row in timg_rows:
-        if row in timg_rows[:int(TIMG_SAVE)]:
-            data_rows.append(row)
-        else:
-            delete_rows.append(row)
-    for row in crop_rows:
-        if row in crop_rows[:int(CROP_SAVE)]:
-            data_rows.append(row)
-        else:
-            delete_rows.append(row)
-    for row in tmp_rows:
-        if row in tmp_rows[:int(TMP_SAVE)]:
-            data_rows.append(row)
-        else:
-            delete_rows.append(row)
-    for apod_filename in delete_rows:
-        if row["category"] in {"timg"}:
-            delete_file(TIMG_DIR, apod_filename["filename"])
-        else:
-            delete_file(IMAGE_DIR, apod_filename["filename"])
+    category_dict = {"timg": TIMG_SAVE, "crop": CROP_SAVE, "orig": ORIG_SAVE,
+                     "tmp": TMP_SAVE}
+    data_rows = read_data_rows(DATA_FILE, FIELD_NAMES)[1:]
+    for key, value in category_dict.items():
+        for item in range(len(category_dict.items())):
+            data_rows = sort_categories(IMAGE_DIR, TIMG_DIR, date_time,
+                                        data_rows, key, value)
     write_data_rows(DATA_FILE, FIELD_NAMES, data_rows)
     return SystemExit(0)
 
@@ -487,39 +474,41 @@ def delete_file(IMAGE_DIR, apod_filename):
         print(e)
 
 
+def reset_field_dict(field_dict):
+    field_dict = SetupConfig().field_dict
+    return field_dict
+
+
 def main():
     date_time = str(datetime.now().strftime("%Y%m%d%H%M%S%f"))
-    apod_category = "orig"
     resp = test_connection(RESP_URL)
     check_data_header(DATA_FILE, FIELD_NAMES)
-    (apod_date, apod_title, apod_explanation, apod_url, apod_filename,
-     apod_copyright, apod_html) = formulate_data(DATA_FILE, QUALITY, API_KEY,
-                                                 FIELD_NAMES, resp)
-    download_apod(IMAGE_DIR, apod_url, apod_filename)
+    formulate_data(DATA_FILE, QUALITY, API_KEY, FIELD_NAMES, field_dict,
+                   date_time, resp)
+    download_apod(IMAGE_DIR, field_dict)
 
-    while verify_dimensions(IMAGE_DIR, MIN_SIZE, apod_filename):
-        create_thumbnail(date_time, IMAGE_DIR, TIMG_DIR, DATA_FILE,
-                         FIELD_NAMES, apod_date, apod_title, apod_explanation,
-                         apod_html, apod_url, apod_filename, apod_copyright)
-        append_data(date_time, DATA_FILE, FIELD_NAMES, "", "", "", "", "",
-                    apod_filename, "", "", "", "tmp")
-        (apod_date, apod_title, apod_explanation, apod_url, apod_filename,
-         apod_copyright, apod_html) = (formulate_data(DATA_FILE, QUALITY,
-                                       API_KEY, FIELD_NAMES,
-                                       generate_data(API_KEY)))
-        download_apod(IMAGE_DIR, apod_url, apod_filename)
-
-    create_thumbnail(date_time, IMAGE_DIR, TIMG_DIR, DATA_FILE, FIELD_NAMES,
-                     apod_date, apod_title, apod_explanation, apod_html,
-                     apod_url, apod_filename, apod_copyright)
-    append_data(date_time, DATA_FILE, FIELD_NAMES, apod_date, "", "", "", "",
-                apod_filename, "", "", "", apod_category)
-    apod_filename = crop_image(date_time, IMAGE_DIR, DATA_FILE, QUALITY,
-                               MIN_SIZE, CROP_RATIO, FIELD_NAMES,
-                               apod_filename)
-    set_background(IMAGE_DIR, QUALITY, CUSTOM_CMD, CUSTOM_ENV, apod_filename)
-    dir_cleanup(date_time, DATA_FILE, TIMG_SAVE, IMAGE_DIR, TIMG_DIR,
-                ORIG_SAVE, CROP_SAVE, TMP_SAVE, FIELD_NAMES)
+    while verify_dimensions(IMAGE_DIR, MIN_SIZE, field_dict):
+        field_dict["uid"] = date_time
+        if "tmp" not in field_dict["category"]:
+            field_dict["category"].append("tmp")
+        create_thumbnail(IMAGE_DIR, TIMG_DIR, DATA_FILE,
+                         FIELD_NAMES, field_dict)
+        append_data(DATA_FILE, FIELD_NAMES, field_dict)
+        formulate_data(DATA_FILE, QUALITY, API_KEY, FIELD_NAMES, field_dict,
+                       date_time, generate_data(API_KEY))
+        download_apod(IMAGE_DIR, field_dict)
+        create_thumbnail(IMAGE_DIR, TIMG_DIR, DATA_FILE, FIELD_NAMES, field_dict)
+    create_thumbnail(IMAGE_DIR, TIMG_DIR, DATA_FILE, FIELD_NAMES, field_dict)
+    crop_image(IMAGE_DIR, DATA_FILE, QUALITY, MIN_SIZE, CROP_RATIO,
+               FIELD_NAMES, field_dict)
+    if "orig" not in field_dict["category"]:
+        field_dict["category"].append("orig")
+    if "tmp" in field_dict["category"]:
+        field_dict["category"].remove("tmp")
+    append_data(DATA_FILE, FIELD_NAMES, field_dict)
+    set_background(IMAGE_DIR, QUALITY, CUSTOM_CMD, CUSTOM_ENV, field_dict)
+    dir_cleanup(DATA_FILE, TIMG_SAVE, IMAGE_DIR, TIMG_DIR, ORIG_SAVE,
+                CROP_SAVE, TMP_SAVE, FIELD_NAMES, date_time, field_dict)
     SystemExit(0)
 
 
