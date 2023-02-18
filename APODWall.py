@@ -24,9 +24,9 @@ from config import SetupConfig
 
 CONF = SetupConfig()
 FIELD_NAMES = CONF.FIELD_NAMES
-IMAGE_DIR = str(CONF.IMAGE_DIR)
-TIMG_DIR = str(CONF.TIMG_DIR)
-DATA_FILE = str(CONF.DATA_FILE)
+IMAGE_DIR = CONF.IMAGE_DIR
+TIMG_DIR = CONF.TIMG_DIR
+DATA_FILE = CONF.DATA_FILE
 TIMG_SAVE = CONF.TIMG_SAVE
 ORIG_SAVE = CONF.ORIG_SAVE
 CROP_SAVE = CONF.CROP_SAVE
@@ -107,8 +107,10 @@ def formulate_data(DATA_FILE, QUALITY, API_KEY, FIELD_NAMES, field_dict,
         field_dict["img-url"] = resp_dict["hdurl"]
         field_dict["filename"] = hd_apod_filename
     for char in escape_list:
-        if char in field_dict["filename"]:
-            field_dict["filename"].replace(char, "")
+        for item in field_dict["filename"]:
+            if char in item:
+                field_dict["filename"] = field_dict["filename"].replace(
+                        char, "")
     reader = read_data_rows(DATA_FILE, FIELD_NAMES)
     for row in reader:
         if field_dict["filename"] in row["filename"]:
@@ -127,7 +129,7 @@ def download_apod(IMAGE_DIR, field_dict):
     resp = test_connection(field_dict["img-url"])
     resp.raw.decode_content = True
     try:
-        with open(IMAGE_DIR + field_dict["filename"], "wb") as d:
+        with open(IMAGE_DIR.joinpath(field_dict["filename"]), "wb") as d:
             d.write(resp.content)
     except (PermissionError, OSError):
         raise SystemExit(1)
@@ -139,7 +141,7 @@ def set_background(IMAGE_DIR, QUALITY, CUSTOM_CMD, CUSTOM_ENV, field_dict):
     $XDG_CURRENT_DESKTOP if on linux, if on windows or mac use sys to
     check platform.
     '''
-    background_path = IMAGE_DIR + field_dict["filename"]
+    background_path = IMAGE_DIR.joinpath(field_dict["filename"])
     wallpaper_cmd = ""
     check_desktop_var = "XDG_CURRENT_DESKTOP"
     if CUSTOM_CMD.strip() != "":
@@ -185,7 +187,7 @@ def set_background(IMAGE_DIR, QUALITY, CUSTOM_CMD, CUSTOM_ENV, field_dict):
             wallpaper_cmd = ('osascript -e ‘tell application “Finder” to set'
                              + ' desktop image to POSIX file'
                              + ' “{}”‘'.format(background_path))
-    wallpaper = str(wallpaper_cmd).format(background_path)
+    wallpaper = wallpaper_cmd.format(str(background_path))
     try:
         subprocess.Popen(wallpaper, shell=True).wait()
     except (FileNotFoundError, PermissionError, OSError):
@@ -281,10 +283,11 @@ def verify_dimensions(IMAGE_DIR, MIN_SIZE, field_dict):
     except IndexError:
         min_width, min_height = (0, 0)
     try:
-        wallpaper = Image.open(IMAGE_DIR + field_dict["filename"])
+        wallpaper = Image.open(IMAGE_DIR.joinpath(field_dict["filename"]))
         apod_width = wallpaper.width
         apod_height = wallpaper.height
-        apod_size = Path(IMAGE_DIR + field_dict["filename"]).stat().st_size
+        apod_size = Path(IMAGE_DIR.joinpath(field_dict["filename"])).stat(
+                ).st_size
         apod_WxH = "{}x{}".format(str(wallpaper.width), str(wallpaper.height))
         field_dict["img-WxH"] = apod_WxH
         field_dict["img-size"] = apod_size
@@ -297,10 +300,10 @@ def verify_dimensions(IMAGE_DIR, MIN_SIZE, field_dict):
 def create_thumbnail(IMAGE_DIR, TIMG_DIR, DATA_FILE, FIELD_NAMES, field_dict):
     '''Create a thumbnail of an APOD.'''
     try:
-        wallpaper = Image.open(IMAGE_DIR + field_dict["filename"])
+        wallpaper = Image.open(IMAGE_DIR.joinpath(field_dict["filename"]))
         wallpaper.thumbnail((310, 310))
-        wallpaper.save(TIMG_DIR + field_dict["filename"].split(".")[0]
-                       + "-timg.png")
+        wallpaper.save(TIMG_DIR.joinpath(field_dict["filename"].split(".")[0]
+                       + "-timg.png"))
         if "timg" not in field_dict["category"]:
             field_dict["category"].append("timg")
     except (FileNotFoundError, PermissionError, OSError):
@@ -315,7 +318,7 @@ def crop_image(IMAGE_DIR, DATA_FILE, QUALITY, MIN_SIZE, CROP_RATIO,
     crop_ratio = CROP_RATIO.split(":")
     crop_ratio = int(crop_ratio[1]) / int(crop_ratio[0])
     try:
-        wallpaper = Image.open(IMAGE_DIR + field_dict["filename"])
+        wallpaper = Image.open(IMAGE_DIR.joinpath(field_dict["filename"]))
         width = wallpaper.width
         height = wallpaper.height
     except (FileNotFoundError, PermissionError, OSError):
@@ -334,14 +337,13 @@ def crop_image(IMAGE_DIR, DATA_FILE, QUALITY, MIN_SIZE, CROP_RATIO,
         top = bottom + crop_height
         left = left
         right = left + width
-    crop_apod_filename = field_dict["filename"].split(".")
-    crop_apod_filename = (crop_apod_filename[0] + "-crop."
-                          + crop_apod_filename[1])
+    crop_filename = field_dict["filename"].split(".")
+    crop_filename = f"{crop_filename[0]}-crop.{crop_filename[1]}"
     field_dict["category"].append("crop")
     try:
-        with Image.open(IMAGE_DIR + field_dict["filename"]) as wallpaper:
+        with Image.open(IMAGE_DIR.joinpath(field_dict["filename"])) as wallpaper:
             crop = wallpaper.crop((left, bottom, right, top))
-            crop.save(IMAGE_DIR + crop_apod_filename)
+            crop.save(IMAGE_DIR.joinpath(crop_filename))
     except (FileNotFoundError, PermissionError, OSError):
         raise SystemExit(1)
 
@@ -427,23 +429,23 @@ def sort_categories(IMAGE_DIR, TIMG_DIR, date_time, data_rows, data_category,
     for row in data_rows:
         if row in category_rows[:len(category_rows) - int(data_save)]:
             try:
-                category_list = list(row["category"].strip("][").replace("'", ""
-                                                                         ).split(", "))
+                category_list = list(row["category"].strip("][").replace(
+                    "'", "").split(", "))
             except AttributeError:
                 category_list = row["category"]
             category_list.remove(data_category)
             if len(category_list) != 0:
                 row["category"] = category_list
                 new_data_rows.append(row)
-                if data_category in "timg":
-                    delete_file(TIMG_DIR, row["filename"].split(".")[0]
-                                + "-timg.png")
-                elif data_category in "crop":
+                if data_category == "timg":
+                    delete_file(TIMG_DIR.joinpath(row["filename"].split(".")[0]
+                                + "-timg.png"))
+                elif data_category == "crop":
                     crop_filename = row["filename"].split(".")
-                    delete_file(IMAGE_DIR, crop_filename[0] + "-crop."
-                                + crop_filename[1])
+                    _crop_filename = (f"{crop_filename[0]}-crop.{crop_filename[1]}")
+                    delete_file(IMAGE_DIR.joinpath(_crop_filename))
                 else:
-                    delete_file(IMAGE_DIR, row["filename"])
+                    delete_file(IMAGE_DIR.joinpath(row["filename"]))
         else:
             new_data_rows.append(row)
     return new_data_rows
@@ -465,10 +467,10 @@ def dir_cleanup(DATA_FILE, TIMG_SAVE, IMAGE_DIR, TIMG_DIR, ORIG_SAVE,
     return SystemExit(0)
 
 
-def delete_file(IMAGE_DIR, apod_filename):
+def delete_file(file):
     '''Delete file. Takes a path and a filename as arguments.'''
     try:
-        os.remove(IMAGE_DIR + apod_filename)
+        os.remove(file)
     except FileNotFoundError as e:
         print(e)
 
