@@ -1,4 +1,4 @@
-# APODWall
+# fetchAPOD
 APODWall is a low dependancy, multi-platform application for downloading the Astronomy Picture of the Day, and setting it as desktop wallpaper. If the day's APOD has already been downloaded it generates a random APOD.
 
 #### **Some of the customability options:**
