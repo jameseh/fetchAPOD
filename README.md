@@ -18,10 +18,3 @@ APODWall is a low dependancy, multi-platform application for downloading the Ast
 python 3.11 +:
 + requests
 + pillow
-
-python 3.10 <:
-+ requests
-+ pillow
-+ tomllib
-
-
