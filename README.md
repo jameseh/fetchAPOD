@@ -7,7 +7,7 @@ An installer.exe for windows can be found on my dropbox.
 
 
 ## Gui Screenshots
-![light-theme splash](https://www.dropbox.com/h?preview=Screenshot+2023-03-13+061431.png)
+![light-theme splash]([https://www.dropbox.com/h?preview=Screenshot+2023-03-13+061431.png](https://github.com/jameseh/fetchAPOD/blob/development/Screenshots/Screenshot%202023-03-13%20061431.png))
 ![dark-theme splash](https://www.dropbox.com/h?preview=Screenshot+2023-03-13+061455.png)
 ![dark-theme gallery](https://www.dropbox.com/h?preview=Screenshot+2023-03-13+061518.png)
 ![dark-theme settings](https://www.dropbox.com/h?preview=Screenshot+2023-03-13+061603.png)
