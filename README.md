@@ -7,10 +7,10 @@ An installer.exe for windows can be found on my dropbox.
 
 
 ## Gui Screenshots
-![light-theme splash](https://github.com/jameseh/fetchAPOD/blob/development/Screenshots/Screenshot%202023-03-13%20061431.png)
-![dark-theme splash](https://www.dropbox.com/h?preview=Screenshot+2023-03-13+061455.png)
-![dark-theme gallery](https://www.dropbox.com/h?preview=Screenshot+2023-03-13+061518.png)
-![dark-theme settings](https://www.dropbox.com/h?preview=Screenshot+2023-03-13+061603.png)
+![light-theme splash](https://github.com/jameseh/fetchAPOD/blob/development/Screenshots/Screenshot%202023-03-13%20061431.png =250x250)
+![dark-theme splash](https://github.com/jameseh/fetchAPOD/blob/development/Screenshots/Screenshot%202023-03-13%20061455.png =250x250)
+![dark-theme gallery](https://github.com/jameseh/fetchAPOD/blob/development/Screenshots/Screenshot%202023-03-13%20061518.png =250x250)
+![dark-theme settings](https://github.com/jameseh/fetchAPOD/blob/development/Screenshots/Screenshot%202023-03-13%20061603.png =250x250)
 
 
 #### **Some of the customability options:**
