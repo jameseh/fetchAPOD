@@ -1,10 +1,9 @@
-#!/usr/bin/env python
+# -*- mode: python ; coding: utf-8 -*-
 '''
 Downloads the lastest APOD (Astronomy Picture of the Day) from apod.nasa.gov
 and sets the image as desktop wallpaper. If the APOD is already in library
 generate a valid random url to a APOD and set that as wallpaper.
  '''
-
 
 import sys
 import os
@@ -12,6 +11,8 @@ import subprocess
 import random
 import re
 import csv
+import ctypes
+import time
 from pathlib import Path
 from datetime import datetime
 from json import loads, decoder
@@ -22,23 +23,39 @@ import requests
 from config import SetupConfig
 
 
-CONF = SetupConfig()
-FIELD_NAMES = CONF.FIELD_NAMES
-IMAGE_DIR = CONF.IMAGE_DIR
-TIMG_DIR = CONF.TIMG_DIR
-DATA_FILE = CONF.DATA_FILE
-TIMG_SAVE = CONF.TIMG_SAVE
-ORIG_SAVE = CONF.ORIG_SAVE
-CROP_SAVE = CONF.CROP_SAVE
-TMP_SAVE = CONF.TMP_SAVE
-QUALITY = CONF.QUALITY
-MIN_SIZE = CONF.MIN_SIZE
-CROP_RATIO = CONF.CROP_RATIO
-CUSTOM_CMD = CONF.CUSTOM_CMD
-CUSTOM_ENV = CONF.CUSTOM_ENV
-API_KEY = CONF.API_KEY
-RESP_URL = "https://api.nasa.gov/planetary/apod?api_key=" + API_KEY
-field_dict = CONF.field_dict
+def init_variables():
+    '''Initiate config varliables'''
+    conf = SetupConfig()
+    FIELD_NAMES = conf.FIELD_NAMES
+    IMAGE_DIR = conf.IMAGE_DIR
+    TIMG_DIR = conf.TIMG_DIR
+    DATA_FILE = conf.DATA_FILE
+    TIMG_SAVE = conf.TIMG_SAVE
+    ORIG_SAVE = conf.ORIG_SAVE
+    CROP_SAVE = conf.CROP_SAVE
+    TMP_SAVE = conf.TMP_SAVE
+    QUALITY = conf.QUALITY
+    MIN_SIZE = conf.MIN_SIZE
+    CROP_RATIO = conf.CROP_RATIO
+    CUSTOM_CMD = conf.CUSTOM_CMD
+    CUSTOM_ENV = conf.CUSTOM_ENV
+    API_KEY = conf.API_KEY
+    RESP_URL = conf.RESP_URL + API_KEY
+    SET_WALLPAPER = conf.SET_WALLPAPER
+    TIME_INTERVAL = conf.TIME_INTERVAL
+    field_dict = conf.field_dict
+    TIME_INTERVAL = int(TIME_INTERVAL) * 60
+    REDOWNLOAD = conf.REDOWNLOAD
+
+    main(FIELD_NAMES, IMAGE_DIR, TIMG_DIR, DATA_FILE, ORIG_SAVE, TIMG_SAVE,
+         CROP_SAVE, TMP_SAVE, QUALITY, MIN_SIZE, CROP_RATIO, API_KEY,
+         CUSTOM_CMD, CUSTOM_ENV, SET_WALLPAPER, RESP_URL, TIME_INTERVAL,
+         REDOWNLOAD, field_dict)
+
+    return (FIELD_NAMES, IMAGE_DIR, TIMG_DIR, DATA_FILE, ORIG_SAVE, TIMG_SAVE,
+            CROP_SAVE, TMP_SAVE, QUALITY, MIN_SIZE, CROP_RATIO, API_KEY,
+            CUSTOM_CMD, CUSTOM_ENV, SET_WALLPAPER, RESP_URL, TIME_INTERVAL,
+            REDOWNLOAD, field_dict)
 
 
 def test_connection(RESP_URL):
@@ -51,13 +68,16 @@ def test_connection(RESP_URL):
             resp = requests.get(RESP_URL, timeout=(12.2, 30), stream=True)
             attempt += 1
             return resp
+
         except (requests.exceptions.Timeout,
                 requests.exceptions.TooManyRedirects,
-                requests.exceptions.ConnectionError):
-            pass
-        except requests.exceptions.RequestException:
-            raise SystemExit(1)
-    raise SystemExit(1)
+                requests.exceptions.ConnectionError) as error:
+                print(f"download_apod(1): {error}")
+                pass
+
+        except requests.exceptions.RequestException as error:
+            print(f"download_apod(2): {error}")
+            return
 
 
 def generate_data(API_KEY):
@@ -75,14 +95,15 @@ def generate_data(API_KEY):
     return resp
 
 
-def formulate_data(DATA_FILE, QUALITY, API_KEY, FIELD_NAMES, field_dict,
-                   date_time, resp):
+def formulate_data(DATA_FILE, QUALITY, API_KEY, FIELD_NAMES, REDOWNLOAD,
+                   field_dict, date_time, resp):
     '''
     Check if an image is in the response text. If the filename is in the
     data file run the function generate_data to get a new APOD.
     '''
-    escape_list = ["(", ")", "{", "}"]
+    escape_list = ["(", ")", "{", "}", "|" "\\"]
     regex_string = r"image/[0-9]{4}/(.*\.(jpg|jpeg|png))"
+
     try:
         resp_dict = loads(resp.text)
         field_dict["uid"] = date_time
@@ -90,33 +111,54 @@ def formulate_data(DATA_FILE, QUALITY, API_KEY, FIELD_NAMES, field_dict,
         field_dict["title"] = resp_dict["title"]
         field_dict["explanation"] = resp_dict["explanation"]
         field_dict["img-url"] = resp_dict["url"]
-        field_dict["filename"] = re.search(regex_string, resp_dict["url"],
+        field_dict["filename"] = re.search(regex_string,
+                                           resp_dict["url"],
                                            re.I).group(1)
-        hd_apod_filename = re.search(regex_string, resp_dict["hdurl"],
-                                     re.I).group(1)
-    except (decoder.JSONDecodeError, re.error, KeyError, AttributeError):
-        return formulate_data(DATA_FILE, QUALITY, API_KEY, FIELD_NAMES,
-                              field_dict, date_time, generate_data(API_KEY))
+        hd_apod_filename = re.search(
+            regex_string,
+            resp_dict["hdurl"],
+            re.I).group(1)
+
+    except (decoder.JSONDecodeError, re.error, KeyError, AttributeError) as \
+            error:
+        print(f"ERROR: formulate_data(1): {error}")
+        return False
+
     try:
         field_dict["copyright"] = resp_dict["copyright"]
+
     except KeyError:
         pass
+
     field_dict["html"] = ("https://apod.nasa.gov/apod/ap{}.html".format(
-                              field_dict["date"][2:].replace("-", "")))
+        field_dict["date"][2:].replace("-", ""))
+                          )
+
+    if "orig" not in field_dict["category"]:
+        field_dict["category"].append("orig")
+
     if QUALITY.lower() == "hd":
         field_dict["img-url"] = resp_dict["hdurl"]
         field_dict["filename"] = hd_apod_filename
+
     for char in escape_list:
         for item in field_dict["filename"]:
             if char in item:
                 field_dict["filename"] = field_dict["filename"].replace(
-                        char, "")
+                        char, ""
+                        )
+
     reader = read_data_rows(DATA_FILE, FIELD_NAMES)
     for row in reader:
         if field_dict["filename"] in row["filename"]:
-            return formulate_data(DATA_FILE, QUALITY, API_KEY, FIELD_NAMES,
-                                  field_dict, date_time, 
-                                  generate_data(API_KEY))
+            if REDOWNLOAD.lower() == "true":
+                return True
+
+            else:
+                return False
+
+    else:
+        return True
 
 
 def download_apod(IMAGE_DIR, field_dict):
@@ -125,14 +167,16 @@ def download_apod(IMAGE_DIR, field_dict):
     to append the apod data to the data file.
     '''
     # Open the response and download the image. Open the data file and
-    # append the filename to the file.
     resp = test_connection(field_dict["img-url"])
     resp.raw.decode_content = True
+
     try:
-        with open(IMAGE_DIR.joinpath(field_dict["filename"]), "wb") as d:
-            d.write(resp.content)
-    except (PermissionError, OSError):
-        raise SystemExit(1)
+        with open(str(Path(IMAGE_DIR).joinpath(field_dict["filename"])),
+                  "wb") as image:
+            image.write(resp.content)
+
+    except (PermissionError, OSError) as error:
+        print(f"download_apod: {error}")
 
 
 def set_background(IMAGE_DIR, QUALITY, CUSTOM_CMD, CUSTOM_ENV, field_dict):
@@ -144,54 +188,76 @@ def set_background(IMAGE_DIR, QUALITY, CUSTOM_CMD, CUSTOM_ENV, field_dict):
     background_path = IMAGE_DIR.joinpath(field_dict["filename"])
     wallpaper_cmd = ""
     check_desktop_var = "XDG_CURRENT_DESKTOP"
+    check_desktop = str(
+            subprocess.check_output("echo ${}".format(check_desktop_var),
+                                    shell=True)).lower()
+
+    # check if custom command, apply wallpaper and return if so.
     if CUSTOM_CMD.strip() != "":
         wallpaper_cmd = CUSTOM_CMD
+        wallpaper = wallpaper_cmd.format(str(background_path))
+
+    # set windows wallpaper and return
+    elif "win32" in sys.platform.lower():
+        ctypes.windll.user32.SystemParametersInfoW(
+                0x14,
+                0,
+                f"{background_path}",
+                0x2
+                )
+        return
+
     else:
         if CUSTOM_ENV.strip() != "":
             check_desktop_var = CUSTOM_ENV
-        check_desktop = str(subprocess.check_output("echo ${}".format(
-                            check_desktop_var), shell=True)).lower()
+
         gnome_list = ["gnome", "unity", "budgie-desktop", "lubuntu"]
-        check_gnome_color = (subprocess.check_output("echo gsettings get org"
-                             + ".gnome.desktop.interface "
-                             + "color-scheme", shell=True))
+        check_gnome_color = subprocess.check_output(
+                "echo gsettings get org.gnome.desktop.interface color-scheme",
+                shell=True)
+
         # gnome - Loop gnome list to check if gnome.desktop is used.
         for item in gnome_list:
             if item in check_desktop:
                 if "prefer-dark" in check_gnome_color:
                     wallpaper_cmd = ("gsettings set org.gnome.desktop"
-                                     + ".background picture-uri-dark {}")
+                                     + ".background picture-uri-dark {}"
+                                     )
+
                 else:
                     wallpaper_cmd = ("gsettings set org.gnome.desktop"
-                                     + ".background picture-uri {}")
+                                     + ".background picture-uri {}"
+                                     )
         # lxde
         if "lxde" in check_desktop:
             wallpaper_cmd = "pcmanfm --set-wallpaper={}"
         # lxqt
-        if "lxqt" in check_desktop:
+        elif "lxqt" in check_desktop:
             wallpaper_cmd = "pcmanfm-qt --set-wallpaper={}"
         # xfce
-        if "xfce" in check_desktop:
+        elif "xfce" in check_desktop:
             wallpaper_cmd = ("xfconf-query -c xfce4-desktop -p /backdrop"
                              + "/screen0/monitor0/workspace0/last-image"
-                             + "-s s {}")
+                             + "-s s {}"
+                             )
         # kde
-        if "kde" in check_desktop:
+        elif "kde" in check_desktop:
             wallpaper_cmd = "plasma-apply-wallpaperimage {}"
-        # windows
-        if "win32" in sys.platform.lower():
-            wallpaper_cmd = ("ctypes.windll.user32.SystemParametersInfoW"
-                             + "(0x14, 0, {}, 0x2)").format(background_path)
         # mac
-        if "darwin" in sys.platform.lower():
-            wallpaper_cmd = ('osascript -e ‘tell application “Finder” to set'
-                             + ' desktop image to POSIX file'
-                             + ' “{}”‘'.format(background_path))
+        elif "darwin" in sys.platform.lower():
+            wallpaper_cmd = (
+                    'osascript -e ‘tell application “Finder” to set desktop'
+                    + ' image to POSIX file “{}”‘'
+                    )
+
     wallpaper = wallpaper_cmd.format(str(background_path))
+
     try:
         subprocess.Popen(wallpaper, shell=True).wait()
-    except (FileNotFoundError, PermissionError, OSError):
-        raise SystemExit(1)
+
+    except (FileNotFoundError, PermissionError, OSError) as error:
+        print(f"set_background: {error}")
+        return
 
 
 def gen_day(rand_month, rand_year):
@@ -207,13 +273,16 @@ def gen_day(rand_month, rand_year):
             if int(rand_year) % 400 == 0:
                 rand_day = random.randint(1, 29)
                 return rand_day
+
         else:
             rand_day = random.randint(1, 28)
             return rand_day
+
     # Determine if the month has 30 days, else the only option left is 31.
     if rand_month in [4, 6, 9, 11] and rand_month != 1:
         rand_day = random.randint(1, 30)
         return rand_day
+
     else:
         rand_day = random.randint(1, 31)
         return rand_day
@@ -245,9 +314,14 @@ def test_valid(rand_day, rand_month, rand_year):
     a new day in place and test again.
     '''
     misstime = [950617, 950618, 950619]
-    rand_date = str(rand_year) + str(rand_month) + str(rand_day)
-    newrand_date = str(rand_year) + str(rand_month) + str(gen_day(rand_month,
-                                                                  rand_year))
+    rand_date = (str(rand_year)
+                 + str(rand_month)
+                 + str(rand_day)
+                 )
+    newrand_date = (str(rand_year)
+                    + str(rand_month)
+                    + str(gen_day(rand_month, rand_year))
+                    )
     # Check if the generated random date is not one of the three days
     # after the first apod was released. No apods on those days.
     if rand_date in misstime:
@@ -261,14 +335,17 @@ def make_url(API_KEY, rand_year, rand_month, rand_day):
     '''
     # Format month and day correctly.
     if len(str(rand_month)) == 1:
-        rand_month = str("0{}".format(rand_month))
+        rand_month = str(f"0{rand_month}")
+
     if len(str(rand_day)) == 1:
-        rand_day = str("0{}".format(rand_day))
+        rand_day = str(f"0{rand_day}")
+
     # Assemble the apod url using the random date. YYMMDD
-    rand_apod_date = "{}-{}-{}".format(str(rand_year), str(rand_month),
-                                       str(rand_day))
+    rand_apod_date = f"{str(rand_year)}-{str(rand_month)}-{str(rand_day)}"
+
     rand_url = ("https://api.nasa.gov/planetary/apod"
-                + "?api_key={}&date={}".format(API_KEY, rand_apod_date))
+                + f"?api_key={API_KEY}&date={rand_apod_date}"
+                )
     return (rand_url, rand_apod_date)
 
 
@@ -278,36 +355,72 @@ def verify_dimensions(IMAGE_DIR, MIN_SIZE, field_dict):
     the value of MIN_SIZE return False.
     '''
     image_min_size = MIN_SIZE.split("x")
+
     try:
         min_width, min_height = image_min_size[0], image_min_size[1]
+
     except IndexError:
         min_width, min_height = (0, 0)
+        pass
+
     try:
         wallpaper = Image.open(IMAGE_DIR.joinpath(field_dict["filename"]))
         apod_width = wallpaper.width
         apod_height = wallpaper.height
-        apod_size = Path(IMAGE_DIR.joinpath(field_dict["filename"])).stat(
-                ).st_size
+        apod_size = int(
+                IMAGE_DIR.joinpath(field_dict["filename"]).stat().st_size
+                )
+
+        if float(apod_size) < 102400:
+            _size = round((apod_size / 1024), 2)
+            apod_size = str(_size) + " Kb"
+
+        else:
+            _size = round(((apod_size / 1024) / 1024), 2)
+            apod_size = str(_size) + " Mb" 
+
         apod_WxH = "{}x{}".format(str(wallpaper.width), str(wallpaper.height))
         field_dict["img-WxH"] = apod_WxH
         field_dict["img-size"] = apod_size
-    except (FileNotFoundError, PermissionError, OSError):
-        raise SystemExit(1)
-    if int(apod_width) < int(min_width) or int(apod_height) < int(min_height): 
+        wallpaper.close()
+
+    except (FileNotFoundError, PermissionError, OSError) as error:
+        print(f"verify_dimensions: {error}")
         return True
+
+
+    if int(apod_width) < int(min_width) or int(apod_height) < int(min_height):
+        if "orig" in field_dict["category"]:
+            field_dict["category"].remove("orig")
+
+        if "tmp" not in field_dict["category"]:
+            field_dict["category"].append("tmp")
+        return False
 
 
 def create_thumbnail(IMAGE_DIR, TIMG_DIR, DATA_FILE, FIELD_NAMES, field_dict):
     '''Create a thumbnail of an APOD.'''
     try:
-        wallpaper = Image.open(IMAGE_DIR.joinpath(field_dict["filename"]))
+        wallpaper = Image.open(
+                Path(IMAGE_DIR).joinpath(field_dict["filename"])
+                )
         wallpaper.thumbnail((310, 310))
-        wallpaper.save(TIMG_DIR.joinpath(field_dict["filename"].split(".")[0]
-                       + "-timg.png"))
+        wallpaper.convert("RGB").save(
+            Path(TIMG_DIR).joinpath(field_dict["filename"]),
+            quality=95,
+            optimize=True,
+            subsampling=0,
+            compress_level=0,
+            icc_profile=wallpaper.info.get('icc_profile')
+            )
+        wallpaper.close()
+
         if "timg" not in field_dict["category"]:
             field_dict["category"].append("timg")
-    except (FileNotFoundError, PermissionError, OSError):
-        raise SystemExit(1)
+
+    except (FileNotFoundError, PermissionError, OSError) as error:
+        print(f"create_thumbnail: {error}")
+        return
 
 
 def crop_image(IMAGE_DIR, DATA_FILE, QUALITY, MIN_SIZE, CROP_RATIO,
@@ -317,35 +430,56 @@ def crop_image(IMAGE_DIR, DATA_FILE, QUALITY, MIN_SIZE, CROP_RATIO,
     '''
     crop_ratio = CROP_RATIO.split(":")
     crop_ratio = int(crop_ratio[1]) / int(crop_ratio[0])
+
     try:
         wallpaper = Image.open(IMAGE_DIR.joinpath(field_dict["filename"]))
         width = wallpaper.width
         height = wallpaper.height
-    except (FileNotFoundError, PermissionError, OSError):
-        raise SystemExit(1)
+
+    except (FileNotFoundError, PermissionError, OSError) as error:
+        print(f"crop_image(1): {error}")
+        return
+
     left, top, right, bottom = (0, 0, 0, 0)
     crop_height = 0
+
     if int(width) >= int(height):
         crop_height = int(height * crop_ratio)
         left = 0
         right = width
         bottom = int((height - crop_height) / 2)
         top = bottom + crop_height
+
     if int(height) > int(width):
         crop_height = int(width * crop_ratio)
         bottom = int((height - crop_height) / 2)
         top = bottom + crop_height
         left = left
         right = left + width
+
     crop_filename = field_dict["filename"].split(".")
     crop_filename = f"{crop_filename[0]}-crop.{crop_filename[1]}"
-    field_dict["category"].append("crop")
+
+    if "crop" not in field_dict["category"]:
+        field_dict["category"].append("crop")
+
     try:
-        with Image.open(IMAGE_DIR.joinpath(field_dict["filename"])) as wallpaper:
+        with Image.open(IMAGE_DIR.joinpath(field_dict["filename"])) as \
+                wallpaper:
             crop = wallpaper.crop((left, bottom, right, top))
-            crop.save(IMAGE_DIR.joinpath(crop_filename))
-    except (FileNotFoundError, PermissionError, OSError):
-        raise SystemExit(1)
+            crop.convert("RGB").save(
+                    IMAGE_DIR.joinpath(crop_filename),
+                    quality=95,
+                    optimize=True,
+                    subsampling=0,
+                    compress_level=0,
+                    icc_profile=wallpaper.info.get(
+                    'icc_profile')
+                    )
+
+    except (FileNotFoundError, PermissionError, OSError) as error:
+        print(f"crop_image(2): {error}")
+        return
 
 
 def check_data_header(DATA_FILE, FIELD_NAMES):
@@ -357,27 +491,46 @@ def check_data_header(DATA_FILE, FIELD_NAMES):
         with open(DATA_FILE, "r") as data_file:
             reader = data_file.readline()
             field_names = ",".join(FIELD_NAMES)
+
             if field_names not in reader:
                 return write_data_header(DATA_FILE, FIELD_NAMES)
-    except (csv.Error, FileNotFoundError, PermissionError, OSError):
+
+    except (csv.Error, FileNotFoundError, PermissionError, OSError) as error:
+        print(f"check_data_header: {error}")
         return write_data_header(DATA_FILE, FIELD_NAMES)
+
+
+def check_data_exists(DATA_FILE):
+    '''
+    Create the data file if not already created.
+    '''
+    if not Path(DATA_FILE).is_file():
+        Path(DATA_FILE).touch(mode=511,
+                              exist_ok=True
+                              )
 
 
 def write_data_header(DATA_FILE, FIELD_NAMES):
     '''Write data file header with field names.'''
     try:
         with open(DATA_FILE, "w", newline="") as data_file:
-            writer = csv.DictWriter(data_file, fieldnames=FIELD_NAMES)
+            writer = csv.DictWriter(data_file,
+                                    fieldnames=FIELD_NAMES
+                                    )
             writer.writeheader()
-    except (csv.Error, PermissionError, OSError):
-        raise SystemExit(1)
+
+    except (csv.Error, PermissionError, OSError, UnicodeEncodeError) as error:
+        print(f"write_data_header: {error}")
+        return
 
 
 def append_data(DATA_FILE, FIELD_NAMES, field_dict):
     '''Append data to the data file.'''
     try:
         with open(DATA_FILE, "a", newline="") as data_file:
-            writer = csv.DictWriter(data_file, fieldnames=FIELD_NAMES)
+            writer = csv.DictWriter(data_file,
+                                    fieldnames=FIELD_NAMES
+                                    )
             writer.writerow({
                 "date": field_dict["date"],
                 "title": field_dict["title"],
@@ -389,63 +542,110 @@ def append_data(DATA_FILE, FIELD_NAMES, field_dict):
                 "img-size": field_dict["img-size"],
                 "copyright": field_dict["copyright"],
                 "uid": field_dict["uid"],
-                "category": field_dict["category"]})
-    except (csv.Error, PermissionError, OSError):
-        raise SystemExit(1)
+                "category": field_dict["category"]}
+                            )
+
+    except (csv.Error, PermissionError, OSError) as error:
+        print(f"append_data(1): {error}")
+        return
+
+    except UnicodeEncodeError as error:
+        print(f"append_data(2): {error}")
+        pass
 
 
 def write_data_rows(DATA_FILE, FIELD_NAMES, data_rows):
     '''Write a new data file from a list.'''
     try:
         with open(DATA_FILE, "w", newline="") as data_file:
-            writer = csv.DictWriter(data_file, fieldnames=FIELD_NAMES)
+            writer = csv.DictWriter(data_file,
+                                    fieldnames=FIELD_NAMES
+                                    )
             writer.writeheader()
             writer.writerows(data_rows)
-    except (csv.Error, PermissionError, OSError):
-        raise SystemExit(1)
+
+    except (csv.Error, PermissionError, OSError) as error:
+        print(f"write_data_rows: {error}")
+        return
 
 
 def read_data_rows(DATA_FILE, FIELD_NAMES):
     '''Read data file, return a list of dictionaries sorted by UID'''
     data_rows = []
+
     try:
         with open(DATA_FILE, "r", newline="") as data_file:
-            reader = csv.DictReader(data_file, FIELD_NAMES)
+            reader = csv.DictReader(data_file,
+                                    FIELD_NAMES
+                                    )
+
             [data_rows.append(row) for row in reader]
-            data_rows = [data_rows[0]] + sorted(data_rows[1:], key=lambda
+            data_rows = [data_rows[0]] + sorted(data_rows[1:],
+                                                key=lambda
                                                 item: item["uid"],
-                                                reverse=False)
+                                                reverse=False
+                                                )
         return data_rows
-    except (csv.Error, FileNotFoundError, PermissionError, OSError):
-        raise SystemExit(1)
+
+    except (csv.Error, FileNotFoundError, PermissionError, OSError) as error:
+        print(f"read_data_rows(1): {error}")
+        return
+
+    except (IndexError, UnicodeEncodeError) as error:
+        print(f"read_data_rows(2): {error}")
+        pass
 
 
-def sort_categories(IMAGE_DIR, TIMG_DIR, date_time, data_rows, data_category,
+def sort_categories(IMAGE_DIR, TIMG_DIR, data_rows, data_category,
                     data_save):
     '''Sort list of dictionaries containing apod data.'''
-    category_rows = []
     new_data_rows = []
-    [category_rows.append(row) for row in data_rows if data_category in row["category"]] 
+    category_rows = []
+
+    [category_rows.append(row) for row in data_rows if data_category in
+     row["category"]]
+
     for row in data_rows:
         if row in category_rows[:len(category_rows) - int(data_save)]:
             try:
-                category_list = list(row["category"].strip("][").replace(
-                    "'", "").split(", "))
+                # convert the category string back into a list
+                category_list = list(
+                        row["category"].strip("][").replace("'", ""
+                                                            ).split(", "))
+
             except AttributeError:
                 category_list = row["category"]
+
             category_list.remove(data_category)
+
             if len(category_list) != 0:
                 row["category"] = category_list
                 new_data_rows.append(row)
+
                 if data_category == "timg":
-                    delete_file(TIMG_DIR.joinpath(row["filename"].split(".")[0]
-                                + "-timg.png"))
+                    delete_file(TIMG_DIR.joinpath(row["filename"]))
+
                 elif data_category == "crop":
-                    crop_filename = row["filename"].split(".")
-                    _crop_filename = (f"{crop_filename[0]}-crop.{crop_filename[1]}")
-                    delete_file(IMAGE_DIR.joinpath(_crop_filename))
+                    _crop_filename = row["filename"].split(".")
+                    crop_filename = (
+                            f"{_crop_filename[0]}-crop.{_crop_filename[1]}"
+                            )
+                    delete_file(Path(IMAGE_DIR).joinpath(crop_filename))
+
+                #elif data_category == "tmp":
+                #    if "orig" in row["category"]:
+                #        row["category"].remove("orig")
+                #    delete_file(Path(IMAGE_DIR).joinpath(row["filename"]))
+
                 else:
-                    delete_file(IMAGE_DIR.joinpath(row["filename"]))
+                    if data_category == "orig" and "tmp" in row["category"]:
+                        row["category"].remove("tmp")
+
+                    delete_file(Path(IMAGE_DIR).joinpath(row["filename"]))
+
+            else:
+                new_data_rows.append(row)
+
         else:
             new_data_rows.append(row)
     return new_data_rows
@@ -458,61 +658,124 @@ def dir_cleanup(DATA_FILE, TIMG_SAVE, IMAGE_DIR, TIMG_DIR, ORIG_SAVE,
     '''
     category_dict = {"timg": TIMG_SAVE, "crop": CROP_SAVE, "orig": ORIG_SAVE,
                      "tmp": TMP_SAVE}
+
     data_rows = read_data_rows(DATA_FILE, FIELD_NAMES)[1:]
+
     for key, value in category_dict.items():
         for item in range(len(category_dict.items())):
-            data_rows = sort_categories(IMAGE_DIR, TIMG_DIR, date_time,
-                                        data_rows, key, value)
+            data_rows = sort_categories(IMAGE_DIR, TIMG_DIR, data_rows, key,
+                                        value)
+
     write_data_rows(DATA_FILE, FIELD_NAMES, data_rows)
-    return SystemExit(0)
 
 
 def delete_file(file):
     '''Delete file. Takes a path and a filename as arguments.'''
     try:
         os.remove(file)
-    except FileNotFoundError as e:
-        print(e)
+
+    except FileNotFoundError as error:
+        print(f"delete_file: {error}")
+        pass
 
 
 def reset_field_dict(field_dict):
-    field_dict = SetupConfig().field_dict
+    new_field_dict = {key: "" for key in field_dict}
+    field_dict = new_field_dict
+    field_dict["category"] = []
     return field_dict
 
 
-def main():
-    date_time = str(datetime.now().strftime("%Y%m%d%H%M%S%f"))
-    resp = test_connection(RESP_URL)
-    check_data_header(DATA_FILE, FIELD_NAMES)
-    formulate_data(DATA_FILE, QUALITY, API_KEY, FIELD_NAMES, field_dict,
-                   date_time, resp)
-    download_apod(IMAGE_DIR, field_dict)
+def check_folders_exist(IMAGE_DIR, TIMG_DIR):
+    data = [IMAGE_DIR, TIMG_DIR]
+    for item in data:
+        if not Path(item).is_dir():
+            Path(item).mkdir(mode=511,
+                             parents=True,
+                             exist_ok=False
+                             )
 
-    while verify_dimensions(IMAGE_DIR, MIN_SIZE, field_dict):
-        field_dict["uid"] = date_time
-        if "tmp" not in field_dict["category"]:
-            field_dict["category"].append("tmp")
-        create_thumbnail(IMAGE_DIR, TIMG_DIR, DATA_FILE,
-                         FIELD_NAMES, field_dict)
-        append_data(DATA_FILE, FIELD_NAMES, field_dict)
-        formulate_data(DATA_FILE, QUALITY, API_KEY, FIELD_NAMES, field_dict,
-                       date_time, generate_data(API_KEY))
-        download_apod(IMAGE_DIR, field_dict)
-        create_thumbnail(IMAGE_DIR, TIMG_DIR, DATA_FILE, FIELD_NAMES, field_dict)
+
+def return_formulate_data(DATA_FILE, QUALITY, API_KEY, FIELD_NAMES, REDOWNLOAD,
+                          field_dict, date_time, resp):
+    return formulate_data(DATA_FILE, QUALITY, API_KEY, FIELD_NAMES, REDOWNLOAD,
+                          field_dict, date_time, resp)
+
+
+def formulate_data_loop(DATA_FILE, QUALITY, API_KEY, FIELD_NAMES, REDOWNLOAD,
+                        field_dict, date_time):
+    for attempt in range(10):
+        data = return_formulate_data(DATA_FILE, QUALITY, API_KEY,
+                                     FIELD_NAMES, REDOWNLOAD, field_dict,
+                                     date_time, generate_data(API_KEY))
+
+        if data:
+            return data
+
+    else:
+        return False
+
+
+def main(FIELD_NAMES, IMAGE_DIR, TIMG_DIR, DATA_FILE, ORIG_SAVE, TIMG_SAVE,
+         CROP_SAVE, TMP_SAVE, QUALITY, MIN_SIZE, CROP_RATIO, API_KEY,
+         CUSTOM_CMD, CUSTOM_ENV, SET_WALLPAPER, RESP_URL, TIME_INTERVAL,
+         REDOWNLOAD, field_dict):
+    '''
+       Runs defined functions to download, set wallpaper, and collect
+       APOD data.
+    '''
+    date_time = str(datetime.now().strftime("%Y%m%d%H%M%S%f"))
+
+    check_data_exists(DATA_FILE)
+    check_folders_exist(IMAGE_DIR, TIMG_DIR)
+    check_data_header(DATA_FILE, FIELD_NAMES)
+
+    if REDOWNLOAD.lower() != "true":
+        RESP_URL = RESP_URL + API_KEY
+    print(RESP_URL)
+    resp = test_connection(RESP_URL)
+    data = formulate_data(DATA_FILE, QUALITY, API_KEY, FIELD_NAMES, REDOWNLOAD,
+                          field_dict, date_time, resp)
+
+    if data != True:
+        field_dict = reset_field_dict(field_dict)
+        data = formulate_data_loop(DATA_FILE, QUALITY, API_KEY, FIELD_NAMES,
+                                   REDOWNLOAD, field_dict, date_time)
+
+    download_apod(IMAGE_DIR, field_dict)
+    dimensions = verify_dimensions(IMAGE_DIR, MIN_SIZE, field_dict)
+
+    if REDOWNLOAD.lower() != "true":
+        while dimensions is False:
+            field_dict["uid"] = date_time
+
+            create_thumbnail(IMAGE_DIR, TIMG_DIR, DATA_FILE, FIELD_NAMES,
+                             field_dict)
+            append_data(DATA_FILE, FIELD_NAMES, field_dict)
+            field_dict = reset_field_dict(field_dict)
+            formulate_data_loop(DATA_FILE, QUALITY, API_KEY, FIELD_NAMES,
+                                REDOWNLOAD, field_dict, date_time)
+            download_apod(IMAGE_DIR, field_dict)
+            dimensions = verify_dimensions(IMAGE_DIR, MIN_SIZE, field_dict)
+
     create_thumbnail(IMAGE_DIR, TIMG_DIR, DATA_FILE, FIELD_NAMES, field_dict)
     crop_image(IMAGE_DIR, DATA_FILE, QUALITY, MIN_SIZE, CROP_RATIO,
                FIELD_NAMES, field_dict)
-    if "orig" not in field_dict["category"]:
-        field_dict["category"].append("orig")
-    if "tmp" in field_dict["category"]:
-        field_dict["category"].remove("tmp")
     append_data(DATA_FILE, FIELD_NAMES, field_dict)
-    set_background(IMAGE_DIR, QUALITY, CUSTOM_CMD, CUSTOM_ENV, field_dict)
-    dir_cleanup(DATA_FILE, TIMG_SAVE, IMAGE_DIR, TIMG_DIR, ORIG_SAVE,
-                CROP_SAVE, TMP_SAVE, FIELD_NAMES, date_time, field_dict)
-    SystemExit(0)
 
+    if (SET_WALLPAPER.lower() == "true"):
+        set_background(IMAGE_DIR, QUALITY, CUSTOM_CMD, CUSTOM_ENV, field_dict)
+        dir_cleanup(DATA_FILE, TIMG_SAVE, IMAGE_DIR, TIMG_DIR, ORIG_SAVE,
+                    CROP_SAVE, TMP_SAVE, FIELD_NAMES, date_time, field_dict)
+
+    if int(TIME_INTERVAL) != 0:
+        while True:
+            time.sleep(TIME_INTERVAL)
+            main(FIELD_NAMES, IMAGE_DIR, TIMG_DIR, DATA_FILE, ORIG_SAVE,
+                 TIMG_SAVE, CROP_SAVE, TMP_SAVE, QUALITY, MIN_SIZE, CROP_RATIO,
+                 API_KEY, CUSTOM_CMD, CUSTOM_ENV, SET_WALLPAPER, RESP_URL,
+                 TIME_INTERVAL, field_dict)
+        SystemExit(0)
 
 if __name__ == "__main__":
-
-    main()
+    init_variables()
