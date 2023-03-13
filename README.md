@@ -59,6 +59,10 @@ An installer.exe for windows can be found on my dropbox.
 
 ```https://github.com/5yutan5/PyQtDarkTheme```
 
++ Google, Google material icons
+
+```https://fonts.google.com/icons```
+
 + QT6
 
 ```https://www.qt.io/product/qt6```
