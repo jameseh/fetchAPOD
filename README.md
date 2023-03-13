@@ -33,7 +33,7 @@ An installer.exe for windows can be found on my dropbox.
 
  alternativly you can clone this repo:
  
- ```git clone https://github.com/YOUR-USERNAME/YOUR-REPOSITORY```
+ ```git clone https://github.com/iijameseh/fetchAPOD```
 
 ## **Dependancies**
 + python 3.11 +:
