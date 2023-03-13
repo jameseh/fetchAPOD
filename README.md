@@ -2,6 +2,7 @@
 fetchAPOD is a low dependancy, multi-platform application for downloading the Astronomy Picture of the Day, and setting it as desktop wallpaper. The application comes as a CLI script or a QT6 application.
 
 An installer.exe for windows can be found on my dropbox.
+
 ```https://www.dropbox.com/s/ayw2e05q6xc1roy/fetchAPOD-installer.exe?dl=0```
 
 #### **Some of the customability options:**
@@ -20,6 +21,7 @@ An installer.exe for windows can be found on my dropbox.
 + Run the fetchAPOD.py
 
  alternativly you can clone this repo:
+ 
  ```git clone https://github.com/YOUR-USERNAME/YOUR-REPOSITORY```
 
 ## **Dependancies**
