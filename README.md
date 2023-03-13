@@ -46,24 +46,31 @@ An installer.exe for windows can be found on my dropbox.
 + pyqtdarktheme
 
 
+
 ## Some Love
 
-Thank you to all the kind people on stackoverflow taking the time to answer people's questions. 
++ Thank you to all the kind people on stackoverflow taking the time to answer people's questions. 
 
-Elinvention@github, the histroy gallery idea was taken directly form the gnome apod extension. 
++ Elinvention@github, the histroy gallery idea was taken directly form the gnome apod extension. 
+
 ```https://github.com/Elinvention/gnome-shell-extension-nasa-apod```
 
-Thank you to the contributors of pyqtdarktheme, the light and dark theme used in fetchAPOD's gui.
++ Thank you to the contributors of pyqtdarktheme, the light and dark theme used in fetchAPOD's gui.
+
 ```https://github.com/5yutan5/PyQtDarkTheme```
 
-QT6,
++ QT6
+
 ```https://www.qt.io/product/qt6```
 
-pillow for image processing
++ pillow for image processing
+
 ```https://python-pillow.org/```
 
-requests for handing web requests.
++ requests for handing web requests.
+
 ```https://requests.readthedocs.io/```
 
-and thank you python.
++ and thank you python.
+
 ```https://python.org```
