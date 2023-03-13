@@ -1,5 +1,4 @@
-#!/bin/python
-
+# -*- mode: python ; coding: utf-8 -*-
 
 import tomllib
 from pathlib import Path
@@ -10,6 +9,7 @@ class SetupConfig:
         self.FIELD_NAMES = ["date", "title", "explanation", "html",
                             "img-url", "filename", "img-WxH", "img-size",
                             "copyright", "uid", "category"]
+
         self.field_dict = {"date": "", "title": "", "explanation": "",
                            "html-url": "", "img-url": "", "filename": "",
                            "img-WxH": "", "img-size": "", "copyright": "",
@@ -17,9 +17,9 @@ class SetupConfig:
         try:
             with open(Path.cwd().joinpath("config.toml"), "rb") as config:
                 self.conf = tomllib.load(config)
+
         except (tomllib.TOMLDecodeError, FileNotFoundError,
                 PermissionError, OSError, AttributeError) as e:
-            print(e)
             raise SystemExit(1)
 
         try:
@@ -33,11 +33,17 @@ class SetupConfig:
             self.ORIG_SAVE = self.conf["GENERAL"]["ORIG_SAVE"]
             self.CROP_SAVE = self.conf["GENERAL"]["CROP_SAVE"]
             self.TMP_SAVE = self.conf["GENERAL"]["TMP_SAVE"]
+            self.TIME_INTERVAL = self.conf["GENERAL"]["TIME_INTERVAL"]
             self.QUALITY = self.conf["IMAGE"]["QUALITY"]
             self.MIN_SIZE = self.conf["IMAGE"]["MIN_SIZE"]
             self.CROP_RATIO = self.conf["IMAGE"]["CROP_RATIO"]
+            self.SET_WALLPAPER = self.conf["IMAGE"]["SET_WALLPAPER"]
+            self.REDOWNLOAD = self.conf["IMAGE"]["REDOWNLOAD"]
             self.CUSTOM_CMD = self.conf["CUSTOM"]["CUSTOM_CMD"]
             self.CUSTOM_ENV = self.conf["CUSTOM"]["CUSTOM_ENV"]
             self.API_KEY = self.conf["API"]["API_KEY"]
-        except (ValueError, KeyError):
+            self.RESP_URL = self.conf["API"]["RESP_URL"]
+
+        except (ValueError, KeyError) as error:
+            print("confing.py: {error}")
             raise SystemExit(1)
