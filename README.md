@@ -5,6 +5,14 @@ An installer.exe for windows can be found on my dropbox.
 
 ```https://www.dropbox.com/s/ayw2e05q6xc1roy/fetchAPOD-installer.exe?dl=0```
 
+
+## Gui Screenshots
+![light-theme splash](https://www.dropbox.com/h?preview=Screenshot+2023-03-13+061431.png)
+![dark-theme splash](https://www.dropbox.com/h?preview=Screenshot+2023-03-13+061455.png)
+![dark-theme gallery](https://www.dropbox.com/h?preview=Screenshot+2023-03-13+061518.png)
+![dark-theme settings](https://www.dropbox.com/h?preview=Screenshot+2023-03-13+061603.png)
+
+
 #### **Some of the customability options:**
 + image quality
 + crop ratio (crop image to resolution before setting as wallpaper)
