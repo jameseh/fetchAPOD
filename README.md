@@ -78,3 +78,5 @@ An installer.exe for windows can be found on my dropbox.
 + and thank you python.
 
 ```https://python.org```
+
++ And a giant thanks to apod.nasa.gov and all the people contributing amazing astronomy images. 
