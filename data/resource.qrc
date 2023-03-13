@@ -1,0 +1,9 @@
+<RCC>
+  <qresource prefix="data">
+    <file>google_icon_setwallpaper.png</file>
+    <file>google_icon_adminsettings.png</file>
+    <file>google_icon_gallerythumbnail.png</file>
+    <file>google_icon_imagesearch.png</file>
+    <file>fetchapod.ico</file>
+  </qresource>
+</RCC>
